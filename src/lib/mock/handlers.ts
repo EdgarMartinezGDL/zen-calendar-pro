@@ -292,7 +292,11 @@ export function handleMockRequest(path: string, method: string, body: Body | nul
   if (is("business-hours", null)) {
     const bh = db.businessHours.find((h) => h.id === seg[1]);
     if (!bh) throw new MockHttpError("Horario no encontrado", 404);
-    if (method === "PATCH") return patch(bh, b);
+    if (method === "PATCH") {
+      const res = patch(bh, b) as BusinessHour;
+      if (b['date']) bh.dayOfWeek = new Date(`${bh.date}T00:00:00`).getDay();
+      return res;
+    }
     if (method === "DELETE") {
       db.businessHours = db.businessHours.filter((h) => h.id !== bh.id);
       return null;
