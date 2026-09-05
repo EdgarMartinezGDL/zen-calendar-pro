@@ -260,13 +260,14 @@ function ReadRow({ label, value }: { label: string; value?: string | null }) {
 
 function ServicesTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
-  const [editing, setEditing] = useState<Service | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
-    durationMinutes: "30",
+    durationMinutes: "55",
     requiredAttendees: "1",
     isActive: true,
   });
@@ -276,16 +277,24 @@ function ServicesTab({ orgId }: { orgId: string }) {
     queryFn: () => api<Service[]>(`/services?organizationId=${orgId}`),
   });
 
+  const editing = (data ?? []).find((s) => s.id === editingId) ?? null;
+
   const open = (s: Service | null) => {
+    setError(null);
     setForm({
       name: s?.name ?? "",
       description: s?.description ?? "",
-      durationMinutes: String(s?.durationMinutes ?? 30),
+      durationMinutes: String(s?.durationMinutes ?? 55),
       requiredAttendees: String(s?.requiredAttendees ?? 1),
       isActive: s?.isActive ?? true,
     });
-    setEditing(s);
+    setEditingId(s?.id ?? null);
     setCreating(!s);
+  };
+
+  const close = () => {
+    setEditingId(null);
+    setCreating(false);
   };
 
   const save = useMutation({
@@ -298,15 +307,34 @@ function ServicesTab({ orgId }: { orgId: string }) {
         isActive: form.isActive,
       };
       return editing
-        ? api(`/services/${editing.id}`, { method: "PATCH", body })
-        : api("/services", { method: "POST", body: { organizationId: orgId, ...body } });
+        ? api<Service>(`/services/${editing.id}`, { method: "PATCH", body })
+        : api<Service>("/services", { method: "POST", body: { organizationId: orgId, ...body } });
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ["services"] });
-      setEditing(null);
-      setCreating(false);
+      if (editing) {
+        toast.success("Servicio actualizado");
+      } else {
+        toast.success("Servicio agregado. Ahora puedes asignarle ubicaciones.");
+        setCreating(false);
+        setEditingId((created as Service)?.id ?? null);
+      }
     },
     onError: (e: Error) => setError(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => api(`/services/${editingId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["services"] });
+      toast.success("Servicio eliminado");
+      setConfirming(false);
+      close();
+    },
+    onError: (e: Error) => {
+      setConfirming(false);
+      setError(e.message);
+    },
   });
 
   return (
@@ -316,7 +344,7 @@ function ServicesTab({ orgId }: { orgId: string }) {
           <li key={s.id}>
             <button onClick={() => open(s)} className="card-zen w-full p-4 text-left hover:bg-accent/40">
               <p className="font-semibold">{s.name}</p>
-              <p className="text-xs text-muted-foreground">{s.durationMinutes} min</p>
+              <p className="text-xs text-muted-foreground">{s.durationMinutes} minutos</p>
             </button>
           </li>
         ))}
@@ -324,14 +352,7 @@ function ServicesTab({ orgId }: { orgId: string }) {
       <DashedButton label="Nuevo servicio" onClick={() => open(null)} />
 
       {(editing || creating) && (
-        <Modal
-          open
-          onClose={() => {
-            setEditing(null);
-            setCreating(false);
-          }}
-          title={editing ? "Editar servicio" : "Nuevo servicio"}
-        >
+        <Modal open onClose={close} title={editing ? "Editar servicio" : "Nuevo servicio"}>
           {error && <Banner kind="error" message={error} />}
           <div className="space-y-3">
             <Field label="Nombre">
@@ -341,8 +362,8 @@ function ServicesTab({ orgId }: { orgId: string }) {
               <textarea rows={2} className={inputCls} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Duración (min)">
-                <input type="number" className={inputCls} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} />
+              <Field label="Duración de cita (minutos)">
+                <input type="number" step={5} min={5} className={inputCls} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} />
               </Field>
               <Field label="Personas requeridas">
                 <input type="number" className={inputCls} value={form.requiredAttendees} onChange={(e) => setForm({ ...form, requiredAttendees: e.target.value })} />
@@ -354,11 +375,38 @@ function ServicesTab({ orgId }: { orgId: string }) {
                 Activo
               </label>
             )}
-            <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+            <div className="flex gap-2">
+              <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+              {editing && (
+                <button
+                  aria-label="Eliminar servicio"
+                  onClick={() => setConfirming(true)}
+                  className="rounded-md border border-border px-3 py-2 text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
             {editing && <ServicePrices service={editing} orgId={orgId} />}
+            {editing && (
+              <button
+                onClick={close}
+                className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold"
+              >
+                Listo
+              </button>
+            )}
           </div>
         </Modal>
       )}
+
+      <Confirm
+        open={confirming}
+        message={`Se eliminará el servicio “${editing?.name ?? ""}” y sus precios por ubicación. ¿Deseas continuar?`}
+        pending={remove.isPending}
+        onConfirm={() => remove.mutate()}
+        onCancel={() => setConfirming(false)}
+      />
     </>
   );
 }
