@@ -120,7 +120,7 @@ function seed(): MockDb {
   }));
 
   const slots: AppointmentSlot[] = [];
-  for (let d = 0; d < 14; d++) {
+  for (let d = -10; d < 14; d++) {
     for (const h of [9, 11, 13, 16]) {
       const startAt = day(d, h);
       slots.push({
@@ -130,7 +130,7 @@ function seed(): MockDb {
         startAt,
         endAt: plus(startAt, 60),
         capacity: 3,
-        bookedCount: d === 0 && h < 13 ? 2 : d % 3 === 0 ? 1 : 0,
+        bookedCount: d < 0 ? (h % 3 === 0 ? 3 : 2) : d === 0 && h < 13 ? 2 : d % 3 === 0 ? 1 : 0,
         isActive: !(d === 4 && h === 16),
       });
     }
@@ -239,12 +239,33 @@ function seed(): MockDb {
     },
   ];
 
+  events.push({
+    id: "evt-0",
+    organizationId: ORG_ID,
+    name: "Retiro de fin de semana",
+    description: "Edición pasada, ya realizada.",
+    startAt: day(-8, 9),
+    endAt: day(-8, 17),
+    locationId: "loc-1",
+    location: { id: "loc-1", name: locations[0]!.name },
+    venueName: "Sala Zen",
+    venueAddress: "Av. Reforma 245",
+    mapsLink: null,
+    requirements: null,
+    notes: null,
+    capacity: 15,
+    bookedCount: 2,
+    isActive: true,
+  });
+
   const registrations: EventRegistration[] = [
     { id: "reg-1", eventId: "evt-1", clientName: "Ana Ruiz", clientPhone: "55 1111 2222", notes: null, status: "CONFIRMED" },
     { id: "reg-2", eventId: "evt-1", clientName: "Luis Herrera", clientPhone: "55 3333 4444", notes: null, status: "CONFIRMED" },
     { id: "reg-3", eventId: "evt-1", clientName: "Carla Vidal", clientPhone: "55 2222 3333", notes: null, status: "CONFIRMED" },
     { id: "reg-4", eventId: "evt-1", clientName: "Iván Castro", clientPhone: "55 5656 7878", notes: null, status: "CANCELLED" },
     { id: "reg-5", eventId: "evt-2", clientName: "Marta Solano", clientPhone: "55 4141 5151", notes: null, status: "CONFIRMED" },
+    { id: "reg-0a", eventId: "evt-0", clientName: "Elena Prado", clientPhone: "55 6666 7777", notes: null, status: "CONFIRMED" },
+    { id: "reg-0b", eventId: "evt-0", clientName: "Raúl Ortiz", clientPhone: "55 8888 9999", notes: null, status: "CONFIRMED" },
     { id: "reg-6", eventId: "evt-2", clientName: "Diego Fuentes", clientPhone: "55 6161 7171", notes: null, status: "CONFIRMED" },
   ];
 
