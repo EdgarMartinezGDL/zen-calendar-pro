@@ -115,7 +115,7 @@ function seed(): MockDb {
   };
 
   const businessHours: BusinessHour[] = [0, 1, 2, 3, 4, 5, 6]
-    .map((offset) => {
+    .map((offset): BusinessHour | null => {
       const date = ymd(offset);
       const dow = new Date(`${date}T00:00:00`).getDay();
       if (dow === 0) return null;
@@ -131,7 +131,7 @@ function seed(): MockDb {
         isActive: true,
         organizationId: ORG_ID,
         locationId: dow % 2 === 0 ? "loc-2" : "loc-1",
-      } satisfies BusinessHour;
+      };
     })
     .filter((h): h is BusinessHour => h !== null);
 
