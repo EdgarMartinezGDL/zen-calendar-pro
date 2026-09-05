@@ -28,8 +28,9 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(USE_MOCK ? "demo@miagendazen.mx" : "");
+  const [password, setPassword] = useState(USE_MOCK ? "demo1234" : "");
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
