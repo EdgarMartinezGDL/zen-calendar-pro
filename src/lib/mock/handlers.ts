@@ -266,16 +266,19 @@ export function handleMockRequest(path: string, method: string, body: Body | nul
   if (is("business-hours")) {
     if (method === "GET")
       return [...db.businessHours].sort(
-        (a, c) => a.dayOfWeek - c.dayOfWeek || a.startTime.localeCompare(c.startTime),
+        (a, c) => a.date.localeCompare(c.date) || a.startTime.localeCompare(c.startTime),
       );
     if (method === "POST") {
+      const date = String(b['date'] ?? new Date().toISOString().slice(0, 10));
       const bh: BusinessHour = {
         id: newId("bh"),
-        dayOfWeek: Number(b['dayOfWeek'] ?? 1),
+        date,
+        dayOfWeek: new Date(`${date}T00:00:00`).getDay(),
         startTime: String(b['startTime'] ?? "09:00"),
         endTime: String(b['endTime'] ?? "18:00"),
-        appointmentDuration: Number(b['appointmentDuration'] ?? 60),
-        breakDuration: Number(b['breakDuration'] ?? 0),
+        appointmentDuration: Number(b['appointmentDuration'] ?? 55),
+        breakDuration: Number(b['breakDuration'] ?? 5),
+        capacity: Number(b['capacity'] ?? 1),
         isActive: b['isActive'] !== false,
         organizationId: ORG_ID,
         locationId: (b['locationId'] as string | null) ?? null,
@@ -285,25 +288,15 @@ export function handleMockRequest(path: string, method: string, body: Body | nul
     }
   }
 
-  if (is("business-hours", "replicate") && method === "POST") {
-    const source = db.businessHours.find((h) => h.id === b['sourceId']);
-    if (!source) throw new MockHttpError("Horario base no encontrado", 404);
-    const days = (b['days'] as number[]) ?? [];
-    if (b['replace']) {
-      db.businessHours = db.businessHours.filter((h) => !days.includes(h.dayOfWeek));
-    }
-    const created = days.map((d) => {
-      const copy: BusinessHour = { ...source, id: newId("bh"), dayOfWeek: d };
-      db.businessHours.push(copy);
-      return copy;
-    });
-    return created;
-  }
 
   if (is("business-hours", null)) {
     const bh = db.businessHours.find((h) => h.id === seg[1]);
     if (!bh) throw new MockHttpError("Horario no encontrado", 404);
-    if (method === "PATCH") return patch(bh, b);
+    if (method === "PATCH") {
+      const res = patch(bh, b) as BusinessHour;
+      if (b['date']) bh.dayOfWeek = new Date(`${bh.date}T00:00:00`).getDay();
+      return res;
+    }
     if (method === "DELETE") {
       db.businessHours = db.businessHours.filter((h) => h.id !== bh.id);
       return null;

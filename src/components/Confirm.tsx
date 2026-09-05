@@ -5,6 +5,7 @@ export function Confirm({
   title = "¿Confirmar eliminación?",
   message,
   confirmLabel = "Sí, eliminar",
+  cancelLabel = "Cancelar",
   pending,
   onConfirm,
   onCancel,
@@ -13,6 +14,7 @@ export function Confirm({
   title?: string;
   message: string;
   confirmLabel?: string;
+  cancelLabel?: string;
   pending?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -25,8 +27,9 @@ export function Confirm({
           onClick={onCancel}
           className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-semibold"
         >
-          Cancelar
+          {cancelLabel}
         </button>
+
         <button
           onClick={onConfirm}
           disabled={pending}

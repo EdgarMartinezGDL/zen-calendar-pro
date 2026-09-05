@@ -72,11 +72,15 @@ export interface OrganizationContext {
 
 export interface BusinessHour {
   id: string;
+  /** Fecha real del bloque en formato YYYY-MM-DD */
+  date: string;
   dayOfWeek: number;
   startTime: string;
   endTime: string;
   appointmentDuration: number;
   breakDuration: number;
+  /** Cupo base por franja */
+  capacity: number;
   isActive: boolean;
   organizationId: string;
   locationId: string | null;
