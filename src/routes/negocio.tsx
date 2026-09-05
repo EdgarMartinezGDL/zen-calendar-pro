@@ -519,21 +519,43 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
 
 /* ---------------- Horarios ---------------- */
 
+const todayYmd = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+const formatDateLabel = (ymd: string) => {
+  const d = new Date(`${ymd}T00:00:00`);
+  const txt = d.toLocaleDateString("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+};
+
+const toMin = (t: string) => {
+  const [h = "0", m = "0"] = t.split(":");
+  return Number(h) * 60 + Number(m);
+};
+
 function HoursTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<BusinessHour | null>(null);
   const [creating, setCreating] = useState(false);
+  const [dateOnly, setDateOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [replicate, setReplicate] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [replicateDays, setReplicateDays] = useState<number[]>([]);
-  const [replace, setReplace] = useState(false);
+  const [showPast, setShowPast] = useState(false);
+  const [overlapStep, setOverlapStep] = useState<0 | 1 | 2>(0);
   const [form, setForm] = useState({
-    dayOfWeek: "1",
+    date: todayYmd(),
     startTime: "09:00",
     endTime: "18:00",
     appointmentDuration: "55",
     breakDuration: "5",
+    capacity: "1",
     locationId: "",
     isActive: true,
   });
@@ -547,43 +569,58 @@ function HoursTab({ orgId }: { orgId: string }) {
     queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
   });
 
-  const grouped = useMemo(() => {
-    const map: Record<number, BusinessHour[]> = {};
-    (data ?? []).forEach((h) => {
-      (map[h.dayOfWeek] ??= []).push(h);
-    });
-    return map;
-  }, [data]);
+  const today = todayYmd();
 
-  const open = (h: BusinessHour | null) => {
+  const groups = useMemo(() => {
+    const map = new Map<string, BusinessHour[]>();
+    [...(data ?? [])]
+      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
+      .forEach((h) => {
+        const list = map.get(h.date) ?? [];
+        list.push(h);
+        map.set(h.date, list);
+      });
+    const all = [...map.entries()];
+    return {
+      past: all.filter(([d]) => d < today),
+      upcoming: all.filter(([d]) => d >= today),
+    };
+  }, [data, today]);
+
+  const open = (h: BusinessHour | null, duplicate = false) => {
     setForm({
-      dayOfWeek: String(h?.dayOfWeek ?? 1),
+      date: duplicate ? today : (h?.date ?? today),
       startTime: h?.startTime ?? "09:00",
       endTime: h?.endTime ?? "18:00",
       appointmentDuration: String(h?.appointmentDuration ?? 55),
       breakDuration: String(h?.breakDuration ?? 5),
+      capacity: String(h?.capacity ?? 1),
       locationId: h?.locationId ?? "",
       isActive: h?.isActive ?? true,
     });
-    setEditing(h);
-    setCreating(!h);
+    setError(null);
+    setDateOnly(duplicate);
+    setEditing(duplicate ? null : h);
+    setCreating(duplicate || !h);
   };
 
   const close = () => {
     setEditing(null);
     setCreating(false);
-    setReplicate(false);
+    setDateOnly(false);
+    setOverlapStep(0);
   };
   const refresh = () => qc.invalidateQueries({ queryKey: ["business-hours"] });
 
   const save = useMutation({
     mutationFn: () => {
       const body = {
-        dayOfWeek: Number(form.dayOfWeek),
+        date: form.date,
         startTime: form.startTime,
         endTime: form.endTime,
         appointmentDuration: Number(form.appointmentDuration),
         breakDuration: Number(form.breakDuration),
+        capacity: Number(form.capacity || 1),
         locationId: form.locationId || undefined,
         isActive: form.isActive,
       };
@@ -599,6 +636,31 @@ function HoursTab({ orgId }: { orgId: string }) {
     onError: (e: Error) => setError(e.message),
   });
 
+  const hasOverlap = () => {
+    const s = toMin(form.startTime);
+    const e = toMin(form.endTime);
+    return (data ?? []).some(
+      (h) =>
+        h.id !== editing?.id &&
+        h.date === form.date &&
+        s < toMin(h.endTime) &&
+        e > toMin(h.startTime),
+    );
+  };
+
+  const attemptSave = () => {
+    setError(null);
+    if (toMin(form.endTime) <= toMin(form.startTime)) {
+      setError("La hora final debe ser posterior a la inicial.");
+      return;
+    }
+    if (hasOverlap()) {
+      setOverlapStep(1);
+      return;
+    }
+    save.mutate();
+  };
+
   const remove = useMutation({
     mutationFn: () => api(`/business-hours/${editing!.id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -609,139 +671,185 @@ function HoursTab({ orgId }: { orgId: string }) {
     },
   });
 
-  const replicateM = useMutation({
-    mutationFn: () =>
-      api("/business-hours/replicate", {
-        method: "POST",
-        body: { sourceId: editing!.id, days: replicateDays, replace },
-      }),
-    onSuccess: () => {
-      refresh();
-      close();
-    },
-  });
+  const renderGroup = ([date, list]: [string, BusinessHour[]]) => (
+    <div key={date}>
+      <h2 className="mb-2 flex items-center gap-2 text-sm font-bold text-muted-foreground">
+        {formatDateLabel(date)}
+        {date === today && (
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+            Hoy
+          </span>
+        )}
+      </h2>
+      <CardList>
+        {list.map((h) => (
+          <li key={h.id} className="card-zen flex items-center gap-2 p-4">
+            <button onClick={() => open(h)} className="flex-1 text-left">
+              <p className="font-semibold">
+                {h.startTime} – {h.endTime}
+                {!h.isActive && (
+                  <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                    Inactivo
+                  </span>
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Citas de {h.appointmentDuration} min · Descanso {h.breakDuration} min · Cupo{" "}
+                {h.capacity ?? 1}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {locations?.find((l) => l.id === h.locationId)?.name ?? "Todas las ubicaciones"}
+              </p>
+            </button>
+            <button
+              aria-label="Reutilizar este bloque en otra fecha"
+              onClick={() => open(h, true)}
+              className="shrink-0 rounded-md border border-border p-2 text-gold"
+            >
+              <Copy className="h-4 w-4" />
+            </button>
+          </li>
+        ))}
+      </CardList>
+    </div>
+  );
 
   return (
     <>
       <div className="space-y-5">
-        {DAYS.map((name, i) => (
-          <div key={name}>
-            <h2 className="mb-2 text-sm font-bold text-muted-foreground">{name}</h2>
-            <CardList>
-              {(grouped[i] ?? []).map((h) => (
-                <li key={h.id}>
-                  <button onClick={() => open(h)} className="card-zen w-full p-4 text-left hover:bg-accent/40">
-                    <p className="font-semibold">
-                      {h.startTime} – {h.endTime}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Citas de {h.appointmentDuration} minutos ·{" "}
-                      {locations?.find((l) => l.id === h.locationId)?.name ?? "Todas las ubicaciones"}
-                    </p>
-                  </button>
-                </li>
-              ))}
-              {!(grouped[i] ?? []).length && (
-                <li className="text-xs text-muted-foreground">Sin horarios</li>
-              )}
-            </CardList>
-          </div>
-        ))}
+        {groups.past.length > 0 && (
+          <button
+            onClick={() => setShowPast((v) => !v)}
+            className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold text-muted-foreground"
+          >
+            {showPast ? "Ocultar fechas anteriores" : `Ver fechas anteriores (${groups.past.length})`}
+          </button>
+        )}
+        {showPast && groups.past.map(renderGroup)}
+        {groups.upcoming.map(renderGroup)}
+        {!groups.upcoming.length && (
+          <p className="text-sm text-muted-foreground">
+            No tienes horarios cargados a partir de hoy.
+          </p>
+        )}
       </div>
       <DashedButton label="Nuevo bloque de horario" onClick={() => open(null)} />
 
       {(editing || creating) && (
-        <Modal open onClose={close} title={editing ? "Editar horario" : "Nuevo bloque de horario"}>
+        <Modal
+          open
+          onClose={close}
+          title={
+            dateOnly
+              ? "Reutilizar bloque en otra fecha"
+              : editing
+                ? "Editar horario"
+                : "Nuevo bloque de horario"
+          }
+        >
           {error && <Banner kind="error" message={error} />}
-          {!replicate ? (
-            <div className="space-y-3">
-              <Field label="Día">
-                <select className={inputCls} value={form.dayOfWeek} onChange={(e) => setForm({ ...form, dayOfWeek: e.target.value })}>
-                  {DAYS.map((d, i) => (
-                    <option key={d} value={i}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Desde">
-                  <input type="time" className={inputCls} value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
-                </Field>
-                <Field label="Hasta">
-                  <input type="time" className={inputCls} value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
-                </Field>
+          <div className="space-y-3">
+            <Field label="Fecha *">
+              <input
+                type="date"
+                className={inputCls}
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              />
+            </Field>
+            {dateOnly ? (
+              <div className="rounded-md bg-muted/60 p-3 text-sm">
+                <p className="font-semibold">
+                  {form.startTime} – {form.endTime}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Citas de {form.appointmentDuration} min · Descanso {form.breakDuration} min · Cupo{" "}
+                  {form.capacity} ·{" "}
+                  {locations?.find((l) => l.id === form.locationId)?.name ?? "Todas las ubicaciones"}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Solo puedes cambiar la fecha de destino.
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Duración de cita (minutos)">
-                  <input type="number" step={5} min={5} className={inputCls} value={form.appointmentDuration} onChange={(e) => setForm({ ...form, appointmentDuration: e.target.value })} />
-                </Field>
-                <Field label="Descanso (minutos)">
-                  <input type="number" step={5} min={0} className={inputCls} value={form.breakDuration} onChange={(e) => setForm({ ...form, breakDuration: e.target.value })} />
-                </Field>
-              </div>
-              <Field label="Ubicación">
-                <select className={inputCls} value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
-                  <option value="">Todas</option>
-                  {(locations ?? []).map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              {editing && (
-                <label className="flex items-center gap-2 text-sm font-medium">
-                  <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
-                  Activo
-                </label>
-              )}
-              <div className="flex gap-2">
-                <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Desde *">
+                    <input type="time" className={inputCls} value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
+                  </Field>
+                  <Field label="Hasta *">
+                    <input type="time" className={inputCls} value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Duración de cita (minutos) *">
+                    <input type="number" step={5} min={5} className={inputCls} value={form.appointmentDuration} onChange={(e) => setForm({ ...form, appointmentDuration: e.target.value })} />
+                  </Field>
+                  <Field label="Descanso (minutos) *">
+                    <input type="number" step={5} min={0} className={inputCls} value={form.breakDuration} onChange={(e) => setForm({ ...form, breakDuration: e.target.value })} />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Cupo base">
+                    <input type="number" min={1} className={inputCls} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
+                  </Field>
+                  <Field label="Ubicación">
+                    <select className={inputCls} value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
+                      <option value="">Todas</option>
+                      {(locations ?? []).map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
                 {editing && (
-                  <button
-                    aria-label="Eliminar horario"
-                    onClick={() => setConfirming(true)}
-                    className="rounded-md border border-border px-3 py-2 text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+                    Activo
+                  </label>
                 )}
-              </div>
+              </>
+            )}
+            <div className="flex gap-2">
+              <SaveButton onClick={attemptSave} pending={save.isPending} />
               {editing && (
                 <button
-                  onClick={() => setReplicate(true)}
-                  className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold text-gold"
+                  aria-label="Eliminar horario"
+                  onClick={() => setConfirming(true)}
+                  className="rounded-md border border-border px-3 py-2 text-destructive"
                 >
-                  Replicar a otros días
+                  <Trash2 className="h-4 w-4" />
                 </button>
               )}
             </div>
-          ) : (
-            <div className="space-y-3">
-              {DAYS.map((d, i) => (
-                <label key={d} className="flex items-center gap-2 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={replicateDays.includes(i)}
-                    onChange={(e) =>
-                      setReplicateDays((prev) =>
-                        e.target.checked ? [...prev, i] : prev.filter((x) => x !== i),
-                      )
-                    }
-                  />
-                  {d}
-                </label>
-              ))}
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} />
-                Reemplazar existentes
-              </label>
-              <SaveButton label="Replicar" onClick={() => replicateM.mutate()} pending={replicateM.isPending} />
-            </div>
-          )}
+          </div>
         </Modal>
       )}
+
+      <Confirm
+        open={overlapStep === 1}
+        title="Horario existente detectado"
+        message="Ya existe un horario configurado para esta fecha. Verifica tus horarios cargados. ¿Deseas continuar de todos modos?"
+        confirmLabel="Continuar"
+        onConfirm={() => setOverlapStep(2)}
+        onCancel={() => setOverlapStep(0)}
+      />
+
+      <Confirm
+        open={overlapStep === 2}
+        title="Confirmación de seguridad"
+        message="Atención: Guardar este bloque puede provocar citas encimadas o doble cita en la misma franja horaria. ¿Confirmas esta acción?"
+        confirmLabel="Confirmar y guardar"
+        cancelLabel="Volver a revisar"
+        pending={save.isPending}
+        onConfirm={() => {
+          setOverlapStep(0);
+          save.mutate();
+        }}
+        onCancel={() => setOverlapStep(0)}
+      />
 
       <Confirm
         open={confirming}
@@ -753,6 +861,7 @@ function HoursTab({ orgId }: { orgId: string }) {
     </>
   );
 }
+
 
 /* ---------------- Cupo ---------------- */
 
