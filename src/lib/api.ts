@@ -46,7 +46,9 @@ export async function api<T>(
   path: string,
   options: { method?: string; body?: unknown } = {},
 ): Promise<T> {
+  if (USE_MOCK) return mockApi<T>(path, options);
   const token = auth.getToken();
+
   const res = await fetch(`${BASE}${path}`, {
     method: options.method ?? "GET",
     headers: {
