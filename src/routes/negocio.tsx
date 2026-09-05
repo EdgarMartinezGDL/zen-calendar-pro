@@ -525,6 +525,7 @@ function HoursTab({ orgId }: { orgId: string }) {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replicate, setReplicate] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [replicateDays, setReplicateDays] = useState<number[]>([]);
   const [replace, setReplace] = useState(false);
   const [form, setForm] = useState({
@@ -592,6 +593,7 @@ function HoursTab({ orgId }: { orgId: string }) {
     },
     onSuccess: () => {
       refresh();
+      toast.success(editing ? "Horario actualizado" : "Bloque de horario agregado");
       close();
     },
     onError: (e: Error) => setError(e.message),
@@ -601,6 +603,8 @@ function HoursTab({ orgId }: { orgId: string }) {
     mutationFn: () => api(`/business-hours/${editing!.id}`, { method: "DELETE" }),
     onSuccess: () => {
       refresh();
+      toast.success("Bloque de horario eliminado");
+      setConfirming(false);
       close();
     },
   });
@@ -697,7 +701,7 @@ function HoursTab({ orgId }: { orgId: string }) {
                 {editing && (
                   <button
                     aria-label="Eliminar horario"
-                    onClick={() => remove.mutate()}
+                    onClick={() => setConfirming(true)}
                     className="rounded-md border border-border px-3 py-2 text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -738,6 +742,14 @@ function HoursTab({ orgId }: { orgId: string }) {
           )}
         </Modal>
       )}
+
+      <Confirm
+        open={confirming}
+        message="Se eliminará este bloque de horario. ¿Deseas continuar?"
+        pending={remove.isPending}
+        onConfirm={() => remove.mutate()}
+        onCancel={() => setConfirming(false)}
+      />
     </>
   );
 }
