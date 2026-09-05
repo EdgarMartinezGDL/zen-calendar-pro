@@ -44,7 +44,6 @@ export const Route = createFileRoute("/negocio")({
 const TABS = ["Ubicaciones", "Servicios", "Horarios", "Cupo", "Configuración"] as const;
 type Tab = (typeof TABS)[number];
 
-const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 function NegocioPage() {
   const [tab, setTab] = useState<Tab>("Ubicaciones");
