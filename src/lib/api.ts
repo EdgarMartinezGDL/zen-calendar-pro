@@ -1,9 +1,14 @@
 import type { AuthUser } from "@/types";
 
-const BASE = (import.meta.env['VITE_API_URL'] as string | undefined) ?? "/api";
+const API_URL = import.meta.env['VITE_API_URL'] as string | undefined;
+const BASE = API_URL ?? "/api";
+
+/** Sin VITE_API_URL definida se usan datos simulados en memoria. */
+export const USE_MOCK = !API_URL;
 
 const TOKEN_KEY = "zen-token";
 const USER_KEY = "zen-user";
+
 
 export class ApiError extends Error {
   status: number;
