@@ -572,8 +572,13 @@ function HoursTab({ orgId }: { orgId: string }) {
 
   const groups = useMemo(() => {
     const map = new Map<string, BusinessHour[]>();
-    [...(data ?? [])]
-      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
+    (data ?? [])
+      .filter((h): h is BusinessHour => Boolean(h?.date))
+      .sort(
+        (a, b) =>
+          a.date.localeCompare(b.date) ||
+          (a.startTime ?? "").localeCompare(b.startTime ?? ""),
+      )
       .forEach((h) => {
         const list = map.get(h.date) ?? [];
         list.push(h);
