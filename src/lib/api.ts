@@ -1,9 +1,14 @@
 import type { AuthUser } from "@/types";
 
-const BASE = (import.meta.env['VITE_API_URL'] as string | undefined) ?? "/api";
+const API_URL = import.meta.env['VITE_API_URL'] as string | undefined;
+const BASE = API_URL ?? "/api";
+
+/** Sin VITE_API_URL definida se usan datos simulados en memoria. */
+export const USE_MOCK = !API_URL;
 
 const TOKEN_KEY = "zen-token";
 const USER_KEY = "zen-user";
+
 
 export class ApiError extends Error {
   status: number;
@@ -41,7 +46,9 @@ export async function api<T>(
   path: string,
   options: { method?: string; body?: unknown } = {},
 ): Promise<T> {
+  if (USE_MOCK) return mockApi<T>(path, options);
   const token = auth.getToken();
+
   const res = await fetch(`${BASE}${path}`, {
     method: options.method ?? "GET",
     headers: {
@@ -74,6 +81,26 @@ function safeParse(text: string): unknown {
     return text;
   }
 }
+
+/** Capa de datos simulados: misma firma que `api`, resuelta en memoria. */
+async function mockApi<T>(
+  path: string,
+  options: { method?: string; body?: unknown },
+): Promise<T> {
+  const { handleMockRequest, MockHttpError } = await import("./mock/handlers");
+  await new Promise((r) => setTimeout(r, 180));
+  try {
+    return handleMockRequest(
+      path,
+      options.method ?? "GET",
+      (options.body as Record<string, unknown> | undefined) ?? null,
+    ) as T;
+  } catch (e) {
+    if (e instanceof MockHttpError) throw new ApiError(e.message, e.status, e.payload);
+    throw e;
+  }
+}
+
 
 export async function login(email: string, password: string) {
   return api<{ access_token: string; user: AuthUser }>("/auth/login", {
