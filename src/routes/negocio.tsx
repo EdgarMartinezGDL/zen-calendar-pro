@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
 import { Modal } from "@/components/Modal";
+import { Confirm } from "@/components/Confirm";
 import { Field, inputCls } from "@/routes/index";
 import { api, auth } from "@/lib/api";
 import type {
@@ -98,6 +100,8 @@ function LocationsTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Location | null>(null);
   const [creating, setCreating] = useState(false);
+  const [readOnly, setReadOnly] = useState(true);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { data } = useQuery({
@@ -108,6 +112,7 @@ function LocationsTab({ orgId }: { orgId: string }) {
   const [form, setForm] = useState({ name: "", address: "", phone: "", email: "", isActive: true });
 
   const open = (loc: Location | null) => {
+    setError(null);
     setForm({
       name: loc?.name ?? "",
       address: loc?.address ?? "",
@@ -117,6 +122,13 @@ function LocationsTab({ orgId }: { orgId: string }) {
     });
     setEditing(loc);
     setCreating(!loc);
+    setReadOnly(!!loc);
+  };
+
+  const close = () => {
+    setEditing(null);
+    setCreating(false);
+    setReadOnly(true);
   };
 
   const save = useMutation({
@@ -134,10 +146,24 @@ function LocationsTab({ orgId }: { orgId: string }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["locations"] });
-      setEditing(null);
-      setCreating(false);
+      toast.success(editing ? "Ubicación actualizada" : "Ubicación agregada");
+      close();
     },
     onError: (e: Error) => setError(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => api(`/locations/${editing!.id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["locations"] });
+      toast.success("Ubicación eliminada");
+      setConfirming(false);
+      close();
+    },
+    onError: (e: Error) => {
+      setConfirming(false);
+      setError(e.message);
+    },
   });
 
   return (
@@ -158,37 +184,77 @@ function LocationsTab({ orgId }: { orgId: string }) {
       {(editing || creating) && (
         <Modal
           open
-          onClose={() => {
-            setEditing(null);
-            setCreating(false);
-          }}
-          title={editing ? "Editar ubicación" : "Nueva ubicación"}
+          onClose={close}
+          title={creating ? "Nueva ubicación" : readOnly ? "Ubicación" : "Editar ubicación"}
         >
           {error && <Banner kind="error" message={error} />}
-          <div className="space-y-3">
-            <Field label="Nombre">
-              <input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </Field>
-            <Field label="Dirección">
-              <input className={inputCls} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            </Field>
-            <Field label="Teléfono">
-              <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </Field>
-            <Field label="Correo">
-              <input className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-            </Field>
-            {editing && (
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
-                Activa
-              </label>
-            )}
-            <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
-          </div>
+
+          {editing && readOnly ? (
+            <div className="space-y-3">
+              <ReadRow label="Nombre" value={editing.name} />
+              <ReadRow label="Dirección" value={editing.address} />
+              <ReadRow label="Teléfono" value={editing.phone} />
+              <ReadRow label="Correo" value={editing.email} />
+              <ReadRow label="Estado" value={editing.isActive ? "Activa" : "Inactiva"} />
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setReadOnly(false)}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+                >
+                  <Pencil className="h-4 w-4" /> Editar
+                </button>
+                <button
+                  aria-label="Eliminar ubicación"
+                  onClick={() => setConfirming(true)}
+                  className="rounded-md border border-border px-3 py-2 text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Field label="Nombre">
+                <input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </Field>
+              <Field label="Dirección">
+                <input className={inputCls} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              </Field>
+              <Field label="Teléfono">
+                <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              </Field>
+              <Field label="Correo">
+                <input className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </Field>
+              {editing && (
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+                  Activa
+                </label>
+              )}
+              <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+            </div>
+          )}
         </Modal>
       )}
+
+      <Confirm
+        open={confirming}
+        message={`Se eliminará “${editing?.name ?? ""}” de forma permanente. ¿Deseas continuar?`}
+        pending={remove.isPending}
+        onConfirm={() => remove.mutate()}
+        onCancel={() => setConfirming(false)}
+      />
     </>
+  );
+}
+
+function ReadRow({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="border-b border-border pb-2">
+      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+      <p className="text-sm">{value?.trim() ? value : "—"}</p>
+    </div>
   );
 }
 
@@ -196,13 +262,14 @@ function LocationsTab({ orgId }: { orgId: string }) {
 
 function ServicesTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
-  const [editing, setEditing] = useState<Service | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
-    durationMinutes: "30",
+    durationMinutes: "55",
     requiredAttendees: "1",
     isActive: true,
   });
@@ -212,16 +279,24 @@ function ServicesTab({ orgId }: { orgId: string }) {
     queryFn: () => api<Service[]>(`/services?organizationId=${orgId}`),
   });
 
+  const editing = (data ?? []).find((s) => s.id === editingId) ?? null;
+
   const open = (s: Service | null) => {
+    setError(null);
     setForm({
       name: s?.name ?? "",
       description: s?.description ?? "",
-      durationMinutes: String(s?.durationMinutes ?? 30),
+      durationMinutes: String(s?.durationMinutes ?? 55),
       requiredAttendees: String(s?.requiredAttendees ?? 1),
       isActive: s?.isActive ?? true,
     });
-    setEditing(s);
+    setEditingId(s?.id ?? null);
     setCreating(!s);
+  };
+
+  const close = () => {
+    setEditingId(null);
+    setCreating(false);
   };
 
   const save = useMutation({
@@ -234,15 +309,34 @@ function ServicesTab({ orgId }: { orgId: string }) {
         isActive: form.isActive,
       };
       return editing
-        ? api(`/services/${editing.id}`, { method: "PATCH", body })
-        : api("/services", { method: "POST", body: { organizationId: orgId, ...body } });
+        ? api<Service>(`/services/${editing.id}`, { method: "PATCH", body })
+        : api<Service>("/services", { method: "POST", body: { organizationId: orgId, ...body } });
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ["services"] });
-      setEditing(null);
-      setCreating(false);
+      if (editing) {
+        toast.success("Servicio actualizado");
+      } else {
+        toast.success("Servicio agregado. Ahora puedes asignarle ubicaciones.");
+        setCreating(false);
+        setEditingId((created as Service)?.id ?? null);
+      }
     },
     onError: (e: Error) => setError(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => api(`/services/${editingId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["services"] });
+      toast.success("Servicio eliminado");
+      setConfirming(false);
+      close();
+    },
+    onError: (e: Error) => {
+      setConfirming(false);
+      setError(e.message);
+    },
   });
 
   return (
@@ -252,7 +346,7 @@ function ServicesTab({ orgId }: { orgId: string }) {
           <li key={s.id}>
             <button onClick={() => open(s)} className="card-zen w-full p-4 text-left hover:bg-accent/40">
               <p className="font-semibold">{s.name}</p>
-              <p className="text-xs text-muted-foreground">{s.durationMinutes} min</p>
+              <p className="text-xs text-muted-foreground">{s.durationMinutes} minutos</p>
             </button>
           </li>
         ))}
@@ -260,14 +354,7 @@ function ServicesTab({ orgId }: { orgId: string }) {
       <DashedButton label="Nuevo servicio" onClick={() => open(null)} />
 
       {(editing || creating) && (
-        <Modal
-          open
-          onClose={() => {
-            setEditing(null);
-            setCreating(false);
-          }}
-          title={editing ? "Editar servicio" : "Nuevo servicio"}
-        >
+        <Modal open onClose={close} title={editing ? "Editar servicio" : "Nuevo servicio"}>
           {error && <Banner kind="error" message={error} />}
           <div className="space-y-3">
             <Field label="Nombre">
@@ -277,8 +364,8 @@ function ServicesTab({ orgId }: { orgId: string }) {
               <textarea rows={2} className={inputCls} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Duración (min)">
-                <input type="number" className={inputCls} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} />
+              <Field label="Duración de cita (minutos)">
+                <input type="number" step={5} min={5} className={inputCls} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} />
               </Field>
               <Field label="Personas requeridas">
                 <input type="number" className={inputCls} value={form.requiredAttendees} onChange={(e) => setForm({ ...form, requiredAttendees: e.target.value })} />
@@ -290,11 +377,38 @@ function ServicesTab({ orgId }: { orgId: string }) {
                 Activo
               </label>
             )}
-            <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+            <div className="flex gap-2">
+              <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+              {editing && (
+                <button
+                  aria-label="Eliminar servicio"
+                  onClick={() => setConfirming(true)}
+                  className="rounded-md border border-border px-3 py-2 text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
             {editing && <ServicePrices service={editing} orgId={orgId} />}
+            {editing && (
+              <button
+                onClick={close}
+                className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold"
+              >
+                Listo
+              </button>
+            )}
           </div>
         </Modal>
       )}
+
+      <Confirm
+        open={confirming}
+        message={`Se eliminará el servicio “${editing?.name ?? ""}” y sus precios por ubicación. ¿Deseas continuar?`}
+        pending={remove.isPending}
+        onConfirm={() => remove.mutate()}
+        onCancel={() => setConfirming(false)}
+      />
     </>
   );
 }
@@ -316,19 +430,33 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
     mutationFn: () =>
       api("/service-locations", {
         method: "POST",
-        body: { serviceId: service.id, locationId, price: Number(price) },
+        body: { serviceId: service.id, locationId, price: Number(price || 0) },
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      const name = (locations ?? []).find((l) => l.id === locationId)?.name ?? "Ubicación";
       setPrice("");
       setLocationId("");
-      qc.invalidateQueries({ queryKey: ["services"] });
+      await qc.invalidateQueries({ queryKey: ["services"] });
+      toast.success(`${name} agregada a este servicio`);
     },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const update = useMutation({
     mutationFn: (vars: { id: string; price: number }) =>
       api(`/service-locations/${vars.id}`, { method: "PATCH", body: { price: vars.price } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["services"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["services"] });
+      toast.success("Precio actualizado");
+    },
+  });
+
+  const unlink = useMutation({
+    mutationFn: (id: string) => api(`/service-locations/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["services"] });
+      toast.success("Ubicación quitada del servicio");
+    },
   });
 
   return (
@@ -336,16 +464,26 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
       <h3 className="mb-2 text-sm font-bold">Precio por ubicación</h3>
       <ul className="mb-3 space-y-2">
         {linked.map((sl) => (
-          <li key={sl.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="min-w-0 truncate">{sl.location?.name ?? sl.locationId}</span>
+          <li key={sl.id} className="flex items-center justify-between gap-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">{sl.location?.name ?? sl.locationId}</span>
             <input
               type="number"
               defaultValue={sl.price}
               onBlur={(e) => update.mutate({ id: sl.id, price: Number(e.target.value) })}
-              className="w-28 shrink-0 rounded-md border border-input bg-background px-2 py-1 text-sm"
+              className="w-24 shrink-0 rounded-md border border-input bg-background px-2 py-1 text-sm"
             />
+            <button
+              aria-label="Quitar ubicación del servicio"
+              onClick={() => unlink.mutate(sl.id)}
+              className="shrink-0 rounded-md border border-border p-1.5 text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </li>
         ))}
+        {!linked.length && (
+          <li className="text-xs text-muted-foreground">Aún no hay ubicaciones en este servicio.</li>
+        )}
       </ul>
       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
         <select className={inputCls} value={locationId} onChange={(e) => setLocationId(e.target.value)}>
@@ -364,13 +502,17 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
           onChange={(e) => setPrice(e.target.value)}
         />
         <button
-          aria-label="Agregar precio"
-          onClick={() => add.mutate()}
-          className="rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground"
+          aria-label="Agregar ubicación al servicio"
+          onClick={() => locationId && add.mutate()}
+          disabled={!locationId || add.isPending}
+          className="rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
           +
         </button>
       </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Puedes agregar varias ubicaciones seguidas; la ventana permanece abierta.
+      </p>
     </div>
   );
 }
@@ -383,14 +525,15 @@ function HoursTab({ orgId }: { orgId: string }) {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replicate, setReplicate] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [replicateDays, setReplicateDays] = useState<number[]>([]);
   const [replace, setReplace] = useState(false);
   const [form, setForm] = useState({
     dayOfWeek: "1",
     startTime: "09:00",
     endTime: "18:00",
-    appointmentDuration: "30",
-    breakDuration: "0",
+    appointmentDuration: "55",
+    breakDuration: "5",
     locationId: "",
     isActive: true,
   });
@@ -417,8 +560,8 @@ function HoursTab({ orgId }: { orgId: string }) {
       dayOfWeek: String(h?.dayOfWeek ?? 1),
       startTime: h?.startTime ?? "09:00",
       endTime: h?.endTime ?? "18:00",
-      appointmentDuration: String(h?.appointmentDuration ?? 30),
-      breakDuration: String(h?.breakDuration ?? 0),
+      appointmentDuration: String(h?.appointmentDuration ?? 55),
+      breakDuration: String(h?.breakDuration ?? 5),
       locationId: h?.locationId ?? "",
       isActive: h?.isActive ?? true,
     });
@@ -450,6 +593,7 @@ function HoursTab({ orgId }: { orgId: string }) {
     },
     onSuccess: () => {
       refresh();
+      toast.success(editing ? "Horario actualizado" : "Bloque de horario agregado");
       close();
     },
     onError: (e: Error) => setError(e.message),
@@ -459,6 +603,8 @@ function HoursTab({ orgId }: { orgId: string }) {
     mutationFn: () => api(`/business-hours/${editing!.id}`, { method: "DELETE" }),
     onSuccess: () => {
       refresh();
+      toast.success("Bloque de horario eliminado");
+      setConfirming(false);
       close();
     },
   });
@@ -489,7 +635,7 @@ function HoursTab({ orgId }: { orgId: string }) {
                       {h.startTime} – {h.endTime}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Citas de {h.appointmentDuration} min ·{" "}
+                      Citas de {h.appointmentDuration} minutos ·{" "}
                       {locations?.find((l) => l.id === h.locationId)?.name ?? "Todas las ubicaciones"}
                     </p>
                   </button>
@@ -527,11 +673,11 @@ function HoursTab({ orgId }: { orgId: string }) {
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Duración de cita">
-                  <input type="number" className={inputCls} value={form.appointmentDuration} onChange={(e) => setForm({ ...form, appointmentDuration: e.target.value })} />
+                <Field label="Duración de cita (minutos)">
+                  <input type="number" step={5} min={5} className={inputCls} value={form.appointmentDuration} onChange={(e) => setForm({ ...form, appointmentDuration: e.target.value })} />
                 </Field>
-                <Field label="Descanso">
-                  <input type="number" className={inputCls} value={form.breakDuration} onChange={(e) => setForm({ ...form, breakDuration: e.target.value })} />
+                <Field label="Descanso (minutos)">
+                  <input type="number" step={5} min={0} className={inputCls} value={form.breakDuration} onChange={(e) => setForm({ ...form, breakDuration: e.target.value })} />
                 </Field>
               </div>
               <Field label="Ubicación">
@@ -555,7 +701,7 @@ function HoursTab({ orgId }: { orgId: string }) {
                 {editing && (
                   <button
                     aria-label="Eliminar horario"
-                    onClick={() => remove.mutate()}
+                    onClick={() => setConfirming(true)}
                     className="rounded-md border border-border px-3 py-2 text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -596,6 +742,14 @@ function HoursTab({ orgId }: { orgId: string }) {
           )}
         </Modal>
       )}
+
+      <Confirm
+        open={confirming}
+        message="Se eliminará este bloque de horario. ¿Deseas continuar?"
+        pending={remove.isPending}
+        onConfirm={() => remove.mutate()}
+        onCancel={() => setConfirming(false)}
+      />
     </>
   );
 }
@@ -609,7 +763,7 @@ function SlotsTab({ orgId }: { orgId: string }) {
   const [creating, setCreating] = useState(false);
   const [capacity, setCapacity] = useState("1");
   const [isActive, setIsActive] = useState(true);
-  const [newSlot, setNewSlot] = useState({ date: "", time: "", duration: "30" });
+  const [newSlot, setNewSlot] = useState({ date: "", time: "", duration: "55" });
 
   const { from, to } = useMemo(() => {
     const start = new Date();
@@ -738,8 +892,8 @@ function SlotsTab({ orgId }: { orgId: string }) {
                     <input type="time" className={inputCls} value={newSlot.time} onChange={(e) => setNewSlot({ ...newSlot, time: e.target.value })} />
                   </Field>
                 </div>
-                <Field label="Duración (min)">
-                  <input type="number" className={inputCls} value={newSlot.duration} onChange={(e) => setNewSlot({ ...newSlot, duration: e.target.value })} />
+                <Field label="Duración (minutos)">
+                  <input type="number" step={5} min={5} className={inputCls} value={newSlot.duration} onChange={(e) => setNewSlot({ ...newSlot, duration: e.target.value })} />
                 </Field>
               </>
             )}
