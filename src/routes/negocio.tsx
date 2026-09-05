@@ -428,19 +428,33 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
     mutationFn: () =>
       api("/service-locations", {
         method: "POST",
-        body: { serviceId: service.id, locationId, price: Number(price) },
+        body: { serviceId: service.id, locationId, price: Number(price || 0) },
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      const name = (locations ?? []).find((l) => l.id === locationId)?.name ?? "Ubicación";
       setPrice("");
       setLocationId("");
-      qc.invalidateQueries({ queryKey: ["services"] });
+      await qc.invalidateQueries({ queryKey: ["services"] });
+      toast.success(`${name} agregada a este servicio`);
     },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const update = useMutation({
     mutationFn: (vars: { id: string; price: number }) =>
       api(`/service-locations/${vars.id}`, { method: "PATCH", body: { price: vars.price } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["services"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["services"] });
+      toast.success("Precio actualizado");
+    },
+  });
+
+  const unlink = useMutation({
+    mutationFn: (id: string) => api(`/service-locations/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["services"] });
+      toast.success("Ubicación quitada del servicio");
+    },
   });
 
   return (
@@ -448,16 +462,26 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
       <h3 className="mb-2 text-sm font-bold">Precio por ubicación</h3>
       <ul className="mb-3 space-y-2">
         {linked.map((sl) => (
-          <li key={sl.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="min-w-0 truncate">{sl.location?.name ?? sl.locationId}</span>
+          <li key={sl.id} className="flex items-center justify-between gap-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">{sl.location?.name ?? sl.locationId}</span>
             <input
               type="number"
               defaultValue={sl.price}
               onBlur={(e) => update.mutate({ id: sl.id, price: Number(e.target.value) })}
-              className="w-28 shrink-0 rounded-md border border-input bg-background px-2 py-1 text-sm"
+              className="w-24 shrink-0 rounded-md border border-input bg-background px-2 py-1 text-sm"
             />
+            <button
+              aria-label="Quitar ubicación del servicio"
+              onClick={() => unlink.mutate(sl.id)}
+              className="shrink-0 rounded-md border border-border p-1.5 text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </li>
         ))}
+        {!linked.length && (
+          <li className="text-xs text-muted-foreground">Aún no hay ubicaciones en este servicio.</li>
+        )}
       </ul>
       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
         <select className={inputCls} value={locationId} onChange={(e) => setLocationId(e.target.value)}>
@@ -476,13 +500,17 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
           onChange={(e) => setPrice(e.target.value)}
         />
         <button
-          aria-label="Agregar precio"
-          onClick={() => add.mutate()}
-          className="rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground"
+          aria-label="Agregar ubicación al servicio"
+          onClick={() => locationId && add.mutate()}
+          disabled={!locationId || add.isPending}
+          className="rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
           +
         </button>
       </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Puedes agregar varias ubicaciones seguidas; la ventana permanece abierta.
+      </p>
     </div>
   );
 }
