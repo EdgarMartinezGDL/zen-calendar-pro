@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
 import { Modal } from "@/components/Modal";
+import { Confirm } from "@/components/Confirm";
 import { Field, inputCls } from "@/routes/index";
 import { api, auth } from "@/lib/api";
 import type {
@@ -529,8 +531,8 @@ function HoursTab({ orgId }: { orgId: string }) {
     dayOfWeek: "1",
     startTime: "09:00",
     endTime: "18:00",
-    appointmentDuration: "30",
-    breakDuration: "0",
+    appointmentDuration: "55",
+    breakDuration: "5",
     locationId: "",
     isActive: true,
   });
@@ -557,8 +559,8 @@ function HoursTab({ orgId }: { orgId: string }) {
       dayOfWeek: String(h?.dayOfWeek ?? 1),
       startTime: h?.startTime ?? "09:00",
       endTime: h?.endTime ?? "18:00",
-      appointmentDuration: String(h?.appointmentDuration ?? 30),
-      breakDuration: String(h?.breakDuration ?? 0),
+      appointmentDuration: String(h?.appointmentDuration ?? 55),
+      breakDuration: String(h?.breakDuration ?? 5),
       locationId: h?.locationId ?? "",
       isActive: h?.isActive ?? true,
     });
@@ -629,7 +631,7 @@ function HoursTab({ orgId }: { orgId: string }) {
                       {h.startTime} – {h.endTime}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Citas de {h.appointmentDuration} min ·{" "}
+                      Citas de {h.appointmentDuration} minutos ·{" "}
                       {locations?.find((l) => l.id === h.locationId)?.name ?? "Todas las ubicaciones"}
                     </p>
                   </button>
@@ -667,11 +669,11 @@ function HoursTab({ orgId }: { orgId: string }) {
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Duración de cita">
-                  <input type="number" className={inputCls} value={form.appointmentDuration} onChange={(e) => setForm({ ...form, appointmentDuration: e.target.value })} />
+                <Field label="Duración de cita (minutos)">
+                  <input type="number" step={5} min={5} className={inputCls} value={form.appointmentDuration} onChange={(e) => setForm({ ...form, appointmentDuration: e.target.value })} />
                 </Field>
-                <Field label="Descanso">
-                  <input type="number" className={inputCls} value={form.breakDuration} onChange={(e) => setForm({ ...form, breakDuration: e.target.value })} />
+                <Field label="Descanso (minutos)">
+                  <input type="number" step={5} min={0} className={inputCls} value={form.breakDuration} onChange={(e) => setForm({ ...form, breakDuration: e.target.value })} />
                 </Field>
               </div>
               <Field label="Ubicación">
@@ -749,7 +751,7 @@ function SlotsTab({ orgId }: { orgId: string }) {
   const [creating, setCreating] = useState(false);
   const [capacity, setCapacity] = useState("1");
   const [isActive, setIsActive] = useState(true);
-  const [newSlot, setNewSlot] = useState({ date: "", time: "", duration: "30" });
+  const [newSlot, setNewSlot] = useState({ date: "", time: "", duration: "55" });
 
   const { from, to } = useMemo(() => {
     const start = new Date();
@@ -878,8 +880,8 @@ function SlotsTab({ orgId }: { orgId: string }) {
                     <input type="time" className={inputCls} value={newSlot.time} onChange={(e) => setNewSlot({ ...newSlot, time: e.target.value })} />
                   </Field>
                 </div>
-                <Field label="Duración (min)">
-                  <input type="number" className={inputCls} value={newSlot.duration} onChange={(e) => setNewSlot({ ...newSlot, duration: e.target.value })} />
+                <Field label="Duración (minutos)">
+                  <input type="number" step={5} min={5} className={inputCls} value={newSlot.duration} onChange={(e) => setNewSlot({ ...newSlot, duration: e.target.value })} />
                 </Field>
               </>
             )}
