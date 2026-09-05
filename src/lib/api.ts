@@ -82,6 +82,26 @@ function safeParse(text: string): unknown {
   }
 }
 
+/** Capa de datos simulados: misma firma que `api`, resuelta en memoria. */
+async function mockApi<T>(
+  path: string,
+  options: { method?: string; body?: unknown },
+): Promise<T> {
+  const { handleMockRequest, MockHttpError } = await import("./mock/handlers");
+  await new Promise((r) => setTimeout(r, 180));
+  try {
+    return handleMockRequest(
+      path,
+      options.method ?? "GET",
+      (options.body as Record<string, unknown> | undefined) ?? null,
+    ) as T;
+  } catch (e) {
+    if (e instanceof MockHttpError) throw new ApiError(e.message, e.status, e.payload);
+    throw e;
+  }
+}
+
+
 export async function login(email: string, password: string) {
   return api<{ access_token: string; user: AuthUser }>("/auth/login", {
     method: "POST",
