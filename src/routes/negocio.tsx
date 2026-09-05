@@ -98,6 +98,8 @@ function LocationsTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Location | null>(null);
   const [creating, setCreating] = useState(false);
+  const [readOnly, setReadOnly] = useState(true);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { data } = useQuery({
@@ -108,6 +110,7 @@ function LocationsTab({ orgId }: { orgId: string }) {
   const [form, setForm] = useState({ name: "", address: "", phone: "", email: "", isActive: true });
 
   const open = (loc: Location | null) => {
+    setError(null);
     setForm({
       name: loc?.name ?? "",
       address: loc?.address ?? "",
@@ -117,6 +120,13 @@ function LocationsTab({ orgId }: { orgId: string }) {
     });
     setEditing(loc);
     setCreating(!loc);
+    setReadOnly(!!loc);
+  };
+
+  const close = () => {
+    setEditing(null);
+    setCreating(false);
+    setReadOnly(true);
   };
 
   const save = useMutation({
@@ -134,10 +144,24 @@ function LocationsTab({ orgId }: { orgId: string }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["locations"] });
-      setEditing(null);
-      setCreating(false);
+      toast.success(editing ? "Ubicación actualizada" : "Ubicación agregada");
+      close();
     },
     onError: (e: Error) => setError(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => api(`/locations/${editing!.id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["locations"] });
+      toast.success("Ubicación eliminada");
+      setConfirming(false);
+      close();
+    },
+    onError: (e: Error) => {
+      setConfirming(false);
+      setError(e.message);
+    },
   });
 
   return (
@@ -158,37 +182,77 @@ function LocationsTab({ orgId }: { orgId: string }) {
       {(editing || creating) && (
         <Modal
           open
-          onClose={() => {
-            setEditing(null);
-            setCreating(false);
-          }}
-          title={editing ? "Editar ubicación" : "Nueva ubicación"}
+          onClose={close}
+          title={creating ? "Nueva ubicación" : readOnly ? "Ubicación" : "Editar ubicación"}
         >
           {error && <Banner kind="error" message={error} />}
-          <div className="space-y-3">
-            <Field label="Nombre">
-              <input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </Field>
-            <Field label="Dirección">
-              <input className={inputCls} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            </Field>
-            <Field label="Teléfono">
-              <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </Field>
-            <Field label="Correo">
-              <input className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-            </Field>
-            {editing && (
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
-                Activa
-              </label>
-            )}
-            <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
-          </div>
+
+          {editing && readOnly ? (
+            <div className="space-y-3">
+              <ReadRow label="Nombre" value={editing.name} />
+              <ReadRow label="Dirección" value={editing.address} />
+              <ReadRow label="Teléfono" value={editing.phone} />
+              <ReadRow label="Correo" value={editing.email} />
+              <ReadRow label="Estado" value={editing.isActive ? "Activa" : "Inactiva"} />
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setReadOnly(false)}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+                >
+                  <Pencil className="h-4 w-4" /> Editar
+                </button>
+                <button
+                  aria-label="Eliminar ubicación"
+                  onClick={() => setConfirming(true)}
+                  className="rounded-md border border-border px-3 py-2 text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Field label="Nombre">
+                <input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </Field>
+              <Field label="Dirección">
+                <input className={inputCls} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              </Field>
+              <Field label="Teléfono">
+                <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              </Field>
+              <Field label="Correo">
+                <input className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </Field>
+              {editing && (
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+                  Activa
+                </label>
+              )}
+              <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+            </div>
+          )}
         </Modal>
       )}
+
+      <Confirm
+        open={confirming}
+        message={`Se eliminará “${editing?.name ?? ""}” de forma permanente. ¿Deseas continuar?`}
+        pending={remove.isPending}
+        onConfirm={() => remove.mutate()}
+        onCancel={() => setConfirming(false)}
+      />
     </>
+  );
+}
+
+function ReadRow({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="border-b border-border pb-2">
+      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+      <p className="text-sm">{value?.trim() ? value : "—"}</p>
+    </div>
   );
 }
 
