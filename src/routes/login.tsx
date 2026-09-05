@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import { Banner } from "@/components/Banner";
 import { Brand } from "@/components/Brand";
-import { auth, login } from "@/lib/api";
+import { auth, login, USE_MOCK } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 import { Moon, Sun } from "lucide-react";
 
@@ -76,6 +76,12 @@ function LoginPage() {
             Ingresa con tu cuenta profesional.
           </p>
 
+          {USE_MOCK && (
+            <Banner
+              kind="success"
+              message="Modo demostración: los datos son simulados. Pulsa Entrar para explorar."
+            />
+          )}
           {error && <Banner kind="error" message={error} />}
 
           <label className="mb-1 block text-sm font-medium" htmlFor="email">
