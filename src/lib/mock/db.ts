@@ -107,17 +107,33 @@ function seed(): MockDb {
     },
   ];
 
-  const businessHours: BusinessHour[] = [1, 2, 3, 4, 5].map((d) => ({
-    id: `bh-${d}`,
-    dayOfWeek: d,
-    startTime: "09:00",
-    endTime: d === 5 ? "15:00" : "18:00",
-    appointmentDuration: 60,
-    breakDuration: 10,
-    isActive: true,
-    organizationId: ORG_ID,
-    locationId: d % 2 === 0 ? "loc-2" : "loc-1",
-  }));
+  const ymd = (offset: number) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + offset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const businessHours: BusinessHour[] = [0, 1, 2, 3, 4, 5, 6]
+    .map((offset) => {
+      const date = ymd(offset);
+      const dow = new Date(`${date}T00:00:00`).getDay();
+      if (dow === 0) return null;
+      return {
+        id: `bh-${date}`,
+        date,
+        dayOfWeek: dow,
+        startTime: "09:00",
+        endTime: dow === 6 ? "14:00" : "18:00",
+        appointmentDuration: 55,
+        breakDuration: 5,
+        capacity: 1,
+        isActive: true,
+        organizationId: ORG_ID,
+        locationId: dow % 2 === 0 ? "loc-2" : "loc-1",
+      } satisfies BusinessHour;
+    })
+    .filter((h): h is BusinessHour => h !== null);
 
   const slots: AppointmentSlot[] = [];
   for (let d = -10; d < 14; d++) {
