@@ -48,8 +48,9 @@ export async function api<T>(
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
   });
+
 
   // Nest devuelve 200 con cuerpo vacío cuando el controller retorna null.
   const text = await res.text();
