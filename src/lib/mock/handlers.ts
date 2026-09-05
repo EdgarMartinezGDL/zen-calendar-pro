@@ -40,12 +40,17 @@ function hydrateAppointment(a: Appointment): Appointment {
   };
 }
 
+function withLocation(sl: ServiceLocation): ServiceLocation {
+  const location = rel(sl.locationId, db.locations);
+  return location ? { ...sl, location } : { ...sl };
+}
+
 function hydrateService(s: Service): Service {
   return {
     ...s,
     serviceLocations: db.serviceLocations
       .filter((sl) => sl.serviceId === s.id)
-      .map((sl) => ({ ...sl, location: rel(sl.locationId, db.locations) ?? undefined })),
+      .map(withLocation),
   };
 }
 
@@ -466,7 +471,7 @@ export function handleMockRequest(path: string, method: string, body: Body | nul
   if (is("service-locations", "by-service", null) && method === "GET") {
     return db.serviceLocations
       .filter((sl) => sl.serviceId === seg[2])
-      .map((sl) => ({ ...sl, location: rel(sl.locationId, db.locations) ?? undefined }));
+      .map(withLocation);
   }
 
   if (is("service-locations", null)) {
