@@ -52,7 +52,7 @@ export function BusinessBrand({
   center = false,
 }: {
   name: string;
-  logoUrl?: string | null;
+  logoUrl?: string | null | undefined;
   size?: "md" | "lg";
   center?: boolean;
 }) {
