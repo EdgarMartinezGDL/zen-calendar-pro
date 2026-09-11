@@ -412,14 +412,14 @@ function Registrations({ eventId, capacity }: { eventId: string; capacity: numbe
   return (
     <div className="mt-5 rounded-[var(--radius)] border border-border bg-muted/30 p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-bold">Pacientes inscritos</h3>
+        <h3 className="text-sm font-bold">Personas inscritas</h3>
         <span className="rounded-full bg-status-confirmed-bg px-2.5 py-1 text-[11px] font-semibold text-status-confirmed">
           {confirmed.length}/{capacity}
         </span>
       </div>
 
       {confirmed.length === 0 ? (
-        <p className="mb-3 text-xs text-muted-foreground">Aún no hay pacientes inscritos.</p>
+        <p className="mb-3 text-xs text-muted-foreground">Aún no hay personas inscritas.</p>
       ) : (
         <ul className="mb-3 space-y-2">
           {confirmed.map((r) => (
@@ -447,7 +447,7 @@ function Registrations({ eventId, capacity }: { eventId: string; capacity: numbe
         <button
           aria-label="Agregar inscrito"
           onClick={() => add.mutate()}
-          className="shrink-0 rounded-md bg-primary px-3 text-primary-foreground"
+          className="btn-primary shrink-0 px-3"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -455,8 +455,9 @@ function Registrations({ eventId, capacity }: { eventId: string; capacity: numbe
 
       <Confirm
         open={!!toCancel}
+        large
         title="Cancelar inscripción"
-        message={`¿Seguro que deseas cancelar la inscripción de este paciente${toCancel ? ` (${toCancel.clientName})` : ""}?`}
+        message={`¿Seguro que deseas cancelar la inscripción de esta persona${toCancel ? ` (${toCancel.clientName})` : ""}?`}
         confirmLabel="Sí, cancelar"
         cancelLabel="No, volver"
         pending={cancel.isPending}
