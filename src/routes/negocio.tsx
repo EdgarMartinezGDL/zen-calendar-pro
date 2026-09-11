@@ -814,6 +814,7 @@ function HoursTab({ orgId }: { orgId: string }) {
                 ? "Editar horario"
                 : "Nuevo bloque de horario"
           }
+          size="lg"
         >
           {error && <Banner kind="error" message={error} />}
           <div className="space-y-3">
@@ -1153,7 +1154,7 @@ function SlotsTab({ orgId }: { orgId: string }) {
       />
 
       {(editing || creating) && (
-        <Modal open onClose={close} title={editing ? "Editar cupo" : "Nuevo horario manual"}>
+        <Modal open onClose={close} title={editing ? "Editar cupo" : "Nuevo horario manual"} size="lg">
           <div className="space-y-3">
             {editing && (
               <p className="rounded-md bg-muted/60 p-3 text-sm font-semibold">
@@ -1179,15 +1180,15 @@ function SlotsTab({ orgId }: { orgId: string }) {
             <Field label="Cupo (1 por defecto, súbelo solo para sobrecupos)">
               <input type="number" min={1} className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
             </Field>
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+            <label className="flex items-center gap-3 text-lg font-medium">
+              <input type="checkbox" className="h-5 w-5" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
               Disponible para agendar
             </label>
             <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
             {editing?.slot && editing.bookedCount === 0 && (
               <button
                 onClick={() => remove.mutate()}
-                className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold text-destructive"
+                className="w-full rounded-md border border-border px-5 py-3.5 text-lg font-semibold text-destructive"
               >
                 Eliminar horario
               </button>

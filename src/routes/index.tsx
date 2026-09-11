@@ -223,7 +223,7 @@ function DetailModal({
   const editable = appointment.status === "PENDING" || appointment.status === "CONFIRMED";
 
   return (
-    <Modal open onClose={close} title="Detalle de la cita">
+    <Modal open onClose={close} title="Detalle de la cita" size="lg">
       {error && <Banner kind="error" message={error} />}
 
       {view === "detail" && (
@@ -268,7 +268,7 @@ function DetailModal({
           <button
             disabled={!date || !time || rescheduleM.isPending}
             onClick={() => rescheduleM.mutate()}
-            className="w-full btn-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            className="w-full btn-primary px-5 py-3.5 text-lg font-bold text-primary-foreground disabled:opacity-60"
           >
             Confirmar nueva fecha
           </button>
@@ -281,14 +281,14 @@ function DetailModal({
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              rows={3}
-              className={inputCls}
+              rows={4}
+              className={`${inputCls} text-lg`}
             />
           </Field>
           <button
             disabled={cancelM.isPending}
             onClick={() => cancelM.mutate()}
-            className="w-full rounded-md bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-60"
+            className="w-full rounded-md bg-destructive px-5 py-3.5 text-lg font-bold text-destructive-foreground transition-[filter] hover:brightness-110 disabled:opacity-60"
           >
             Confirmar cancelación
           </button>
@@ -371,7 +371,7 @@ function NewAppointmentModal({
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Nueva cita">
+    <Modal open={open} onClose={onClose} title="Nueva cita" size="lg">
       {error && <Banner kind="error" message={error} />}
       <div className="space-y-3">
         <Field label="Cliente *">
@@ -458,7 +458,11 @@ function NewAppointmentModal({
         <button
           disabled={create.isPending || !isValid}
           onClick={submit}
-          className="w-full btn-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          className={
+            isValid
+              ? "w-full btn-primary px-5 py-4 text-xl font-extrabold tracking-tight text-primary-foreground shadow-lg ring-2 ring-primary/30"
+              : "w-full cursor-not-allowed rounded-md bg-muted px-4 py-3 text-base font-semibold text-muted-foreground"
+          }
         >
           Agendar cita
         </button>
@@ -476,14 +480,15 @@ function NewAppointmentModal({
         open={askOptional}
         onClose={() => setAskOptional(false)}
         title="Campos opcionales sin rellenar"
+        size="lg"
       >
-        <p className="text-sm text-muted-foreground">
+        <p className="text-lg leading-relaxed text-muted-foreground">
           Hay campos opcionales sin rellenar. ¿Deseas agendar la cita de todos modos?
         </p>
-        <div className="mt-5 flex gap-2">
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row">
           <button
             onClick={() => setAskOptional(false)}
-            className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-semibold"
+            className="flex-1 rounded-md border border-border px-5 py-3.5 text-lg font-semibold"
           >
             No, revisar
           </button>
@@ -492,7 +497,7 @@ function NewAppointmentModal({
               setAskOptional(false);
               create.mutate(false);
             }}
-            className="flex-1 btn-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+            className="flex-1 btn-primary px-5 py-3.5 text-lg font-bold text-primary-foreground"
           >
             Sí, agendar
           </button>
@@ -503,7 +508,7 @@ function NewAppointmentModal({
 }
 
 export const inputCls =
-  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
+  "w-full rounded-md border border-input bg-background px-3.5 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring";
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
