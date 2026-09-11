@@ -174,15 +174,39 @@ function LocationsTab({ orgId }: { orgId: string }) {
     },
   });
 
+  const mapsUrlInvalid = form.mapsUrl.trim() !== "" && !/^https?:\/\/\S+$/i.test(form.mapsUrl.trim());
+  const bigInput = `${inputCls} h-12 text-base`;
+
   return (
     <>
       <CardList>
         {(data ?? []).map((l) => (
           <li key={l.id}>
-            <button onClick={() => open(l)} className="card-zen w-full p-4 text-left hover:bg-accent/40">
-              <p className="font-semibold">{l.name}</p>
-              <p className="text-xs text-muted-foreground">{l.address ?? "Sin dirección"}</p>
-              {!l.isActive && <span className="text-xs text-status-completed">Inactiva</span>}
+            <button onClick={() => open(l)} className="card-zen w-full p-6 text-left hover:bg-accent/40">
+              <p className="text-xl font-bold">{l.name}</p>
+              <p className="mt-1 text-base text-muted-foreground">{l.address ?? "Sin dirección"}</p>
+              {l.mapsUrl && (
+                <span
+                  role="link"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(l.mapsUrl!, "_blank", "noopener");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.stopPropagation();
+                      window.open(l.mapsUrl!, "_blank", "noopener");
+                    }
+                  }}
+                  className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-base font-semibold text-primary"
+                >
+                  <MapPin className="h-5 w-5" /> Abrir en Maps
+                </span>
+              )}
+              {!l.isActive && (
+                <span className="mt-2 block text-base text-status-completed">Inactiva</span>
+              )}
             </button>
           </li>
         ))}
@@ -198,49 +222,79 @@ function LocationsTab({ orgId }: { orgId: string }) {
           {error && <Banner kind="error" message={error} />}
 
           {editing && readOnly ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <ReadRow label="Nombre" value={editing.name} />
               <ReadRow label="Dirección" value={editing.address} />
               <ReadRow label="Teléfono" value={editing.phone} />
               <ReadRow label="Correo" value={editing.email} />
               <ReadRow label="Estado" value={editing.isActive ? "Activa" : "Inactiva"} />
+              {editing.mapsUrl && (
+                <a
+                  href={editing.mapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-3 text-base font-semibold text-primary"
+                >
+                  <MapPin className="h-5 w-5" /> Abrir en Maps
+                </a>
+              )}
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => setReadOnly(false)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-base font-semibold text-primary-foreground"
                 >
-                  <Pencil className="h-4 w-4" /> Editar
+                  <Pencil className="h-5 w-5" /> Editar
                 </button>
                 <button
                   aria-label="Eliminar ubicación"
                   onClick={() => setConfirming(true)}
-                  className="rounded-md border border-border px-3 py-2 text-destructive"
+                  className="rounded-md border border-border px-4 py-3 text-destructive"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5" />
                 </button>
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4 text-base">
               <Field label="Nombre">
-                <input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <input className={bigInput} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </Field>
               <Field label="Dirección">
-                <input className={inputCls} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <input className={bigInput} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
               </Field>
+              <Field label="Enlace de Google Maps">
+                <input
+                  type="url"
+                  className={bigInput}
+                  placeholder="https://maps.app.goo.gl/..."
+                  value={form.mapsUrl}
+                  onChange={(e) => setForm({ ...form, mapsUrl: e.target.value })}
+                />
+              </Field>
+              {mapsUrlInvalid && (
+                <p className="-mt-2 text-sm text-destructive">
+                  Ingresa un enlace válido que empiece con https://
+                </p>
+              )}
               <Field label="Teléfono">
-                <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <input className={bigInput} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               </Field>
               <Field label="Correo">
-                <input className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <input className={bigInput} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </Field>
               {editing && (
-                <label className="flex items-center gap-2 text-sm font-medium">
+                <label className="flex items-center gap-2 text-base font-medium">
                   <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
                   Activa
                 </label>
               )}
-              <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+              <button
+                onClick={() => save.mutate()}
+                disabled={save.isPending || mapsUrlInvalid || !form.name.trim()}
+                className="w-full rounded-md bg-primary px-4 py-3 text-base font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                Guardar
+              </button>
             </div>
           )}
         </Modal>
@@ -259,9 +313,9 @@ function LocationsTab({ orgId }: { orgId: string }) {
 
 function ReadRow({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="border-b border-border pb-2">
-      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p className="text-sm">{value?.trim() ? value : "—"}</p>
+    <div className="border-b border-border pb-3">
+      <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+      <p className="text-lg">{value?.trim() ? value : "—"}</p>
     </div>
   );
 }
