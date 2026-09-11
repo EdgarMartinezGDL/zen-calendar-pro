@@ -425,7 +425,7 @@ function NewAppointmentModal({
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Fecha">
+          <Field label="Fecha *">
             <input
               type="date"
               className={inputCls}
@@ -433,7 +433,7 @@ function NewAppointmentModal({
               onChange={(e) => setForm({ ...form, date: e.target.value })}
             />
           </Field>
-          <Field label="Hora">
+          <Field label="Hora *">
             <input
               type="time"
               className={inputCls}
@@ -442,9 +442,22 @@ function NewAppointmentModal({
             />
           </Field>
         </div>
+        <Field label="Notas (opcional)">
+          <textarea
+            rows={2}
+            className={inputCls}
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
+        </Field>
+        {!isValid && (
+          <p className="text-xs text-muted-foreground">
+            Completa los campos obligatorios (*) para poder agendar.
+          </p>
+        )}
         <button
-          disabled={create.isPending}
-          onClick={() => create.mutate(false)}
+          disabled={create.isPending || !isValid}
+          onClick={submit}
           className="w-full rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
         >
           Agendar cita
@@ -458,6 +471,33 @@ function NewAppointmentModal({
           </button>
         )}
       </div>
+
+      <Modal
+        open={askOptional}
+        onClose={() => setAskOptional(false)}
+        title="Campos opcionales sin rellenar"
+      >
+        <p className="text-sm text-muted-foreground">
+          Hay campos opcionales sin rellenar. ¿Deseas agendar la cita de todos modos?
+        </p>
+        <div className="mt-5 flex gap-2">
+          <button
+            onClick={() => setAskOptional(false)}
+            className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-semibold"
+          >
+            No, revisar
+          </button>
+          <button
+            onClick={() => {
+              setAskOptional(false);
+              create.mutate(false);
+            }}
+            className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+          >
+            Sí, agendar
+          </button>
+        </div>
+      </Modal>
     </Modal>
   );
 }
