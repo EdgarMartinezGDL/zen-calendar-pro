@@ -10,6 +10,7 @@ import { Modal } from "@/components/Modal";
 import { Confirm } from "@/components/Confirm";
 import { Field, inputCls } from "@/routes/index";
 import { api, auth } from "@/lib/api";
+import { applyBranding } from "@/lib/branding";
 import type {
   AISettings,
   AppointmentSlot,
@@ -1377,6 +1378,13 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
   const [form, setForm] = useState<Partial<Organization>>({});
   const value = { ...(data ?? {}), ...form } as Organization;
 
+  const qc = useQueryClient();
+
+  // Aplica colores y tipografía en vivo mientras se editan
+  useEffect(() => {
+    applyBranding(value);
+  }, [value.primaryColor, value.secondaryColor, value.fontFamily, value.fontScale]);
+
   const save = useMutation({
     mutationFn: () =>
       api(`/organizations/${orgId}/branding`, {
@@ -1390,37 +1398,49 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           fontScale: value.fontScale,
         },
       }),
-    onSuccess: onClose,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["organization"] });
+      toast.success("Marca actualizada");
+      onClose();
+    },
     onError: (e: Error) => setError(e.message),
   });
+
+  const big = `${inputCls} h-12 text-lg`;
 
   return (
     <Modal open onClose={onClose} title="Marca">
       {error && <Banner kind="error" message={error} />}
-      <div className="space-y-3">
+      <div className="space-y-5 text-lg">
         <Field label="Tema">
-          <select className={inputCls} value={value.theme ?? "auto"} onChange={(e) => setForm({ ...form, theme: e.target.value as Organization["theme"] })}>
+          <select className={big} value={value.theme ?? "auto"} onChange={(e) => setForm({ ...form, theme: e.target.value as Organization["theme"] })}>
             <option value="light">Claro</option>
             <option value="dark">Oscuro</option>
             <option value="auto">Automático</option>
           </select>
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Color primario">
-            <div className="flex gap-2">
-              <input type="color" value={value.primaryColor ?? "#0F766E"} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} className="h-9 w-10 rounded-md border border-input" />
-              <input className={inputCls} value={value.primaryColor ?? ""} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} />
+            <div className="flex gap-3">
+              <input aria-label="Selector de color primario" type="color" value={value.primaryColor ?? "#0F766E"} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} className="h-12 w-14 rounded-md border border-input" />
+              <input className={big} placeholder="#0F766E" value={value.primaryColor ?? ""} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} />
             </div>
           </Field>
           <Field label="Color secundario">
-            <div className="flex gap-2">
-              <input type="color" value={value.secondaryColor ?? "#D97706"} onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })} className="h-9 w-10 rounded-md border border-input" />
-              <input className={inputCls} value={value.secondaryColor ?? ""} onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })} />
+            <div className="flex gap-3">
+              <input aria-label="Selector de color secundario" type="color" value={value.secondaryColor ?? "#D97706"} onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })} className="h-12 w-14 rounded-md border border-input" />
+              <input className={big} placeholder="#D97706" value={value.secondaryColor ?? ""} onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })} />
             </div>
           </Field>
         </div>
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-4">
+          <span className="rounded-md bg-primary px-4 py-2 text-base font-semibold text-primary-foreground">
+            Botón principal
+          </span>
+          <span className="text-base font-semibold text-gold">Detalle dorado</span>
+        </div>
         <Field label="Tipografía">
-          <select className={inputCls} value={value.fontFamily ?? "Inter"} onChange={(e) => setForm({ ...form, fontFamily: e.target.value })}>
+          <select className={big} value={value.fontFamily ?? "Inter"} onChange={(e) => setForm({ ...form, fontFamily: e.target.value })}>
             {FONTS.map((f) => (
               <option key={f} value={f}>
                 {f}
@@ -1429,7 +1449,7 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           </select>
         </Field>
         <Field label="Tamaño de texto">
-          <select className={inputCls} value={value.fontScale ?? "md"} onChange={(e) => setForm({ ...form, fontScale: e.target.value as Organization["fontScale"] })}>
+          <select className={big} value={value.fontScale ?? "md"} onChange={(e) => setForm({ ...form, fontScale: e.target.value as Organization["fontScale"] })}>
             <option value="sm">Chico</option>
             <option value="md">Normal</option>
             <option value="lg">Grande</option>
@@ -1437,18 +1457,24 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         </Field>
         <Field label="URL del logo">
           <input
-            className={inputCls}
+            className={big}
             placeholder="https://.../mi-logo.png"
             value={value.logoUrl ?? ""}
             onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
           />
         </Field>
-        <p className="-mt-1 text-xs leading-relaxed text-muted-foreground">
+        <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
           Pega el enlace directo a tu imagen (.png, .jpg o .webp). Puedes alojarla en servicios como
           postimages.org o imgbb.com (copiando la opción «Enlace directo»).
         </p>
         <LogoPreview url={value.logoUrl ?? ""} />
-        <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+        <button
+          onClick={() => save.mutate()}
+          disabled={save.isPending}
+          className="w-full rounded-md bg-primary px-4 py-3 text-lg font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          Guardar
+        </button>
       </div>
     </Modal>
   );
