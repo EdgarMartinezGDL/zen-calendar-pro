@@ -1,10 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { BarChart3, CalendarDays, LogOut, Moon, Store, Sun, Sparkles } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { Brand } from "@/components/Brand";
-import { auth } from "@/lib/api";
+import { BusinessBrand, PlatformSeal } from "@/components/Brand";
+import { api, auth } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
+import type { Organization } from "@/types";
 
 const NAV = [
   { to: "/", label: "Hoy", icon: CalendarDays },
