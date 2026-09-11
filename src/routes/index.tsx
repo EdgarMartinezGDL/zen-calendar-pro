@@ -89,7 +89,7 @@ function HoyPage() {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <p className="flex-1 text-sm font-medium capitalize text-muted-foreground">
+          <p className="flex-1 text-center text-xl font-bold capitalize tracking-tight md:text-2xl">
             {fmtDate(day)}
           </p>
           {offset !== 0 && (
