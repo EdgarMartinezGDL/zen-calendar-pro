@@ -381,7 +381,7 @@ function NewAppointmentModal({
             onChange={(e) => setForm({ ...form, clientName: e.target.value })}
           />
         </Field>
-        <Field label="Teléfono">
+        <Field label="Teléfono *">
           <input
             className={inputCls}
             value={form.clientPhone}
