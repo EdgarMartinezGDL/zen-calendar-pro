@@ -70,7 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Sidebar escritorio */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar p-4 md:flex">
         <div className="px-2 py-3">
-          <Brand />
+          <BusinessBrand name={businessName} logoUrl={org?.logoUrl} />
         </div>
         <nav className="mt-6 flex flex-1 flex-col gap-1">
           {NAV.map(({ to, label, icon: Icon }) => (
