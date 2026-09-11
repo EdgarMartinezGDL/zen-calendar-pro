@@ -76,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Sidebar escritorio */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar p-4 md:flex">
         <div className="px-2 py-3">
-          <BusinessBrand name={businessName} logoUrl={org?.logoUrl} />
+          <BusinessBrand name={businessName} logoUrl={org?.logoUrl} nameSize={headerNameSize} />
         </div>
         <nav className="mt-6 flex flex-1 flex-col gap-1">
           {NAV.map(({ to, label, icon: Icon }) => (
@@ -109,9 +109,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Cabecera móvil */}
       <header className="sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-card px-4 py-3 md:hidden">
-        <BusinessBrand name={businessName} logoUrl={org?.logoUrl} />
+        <BusinessBrand name={businessName} logoUrl={org?.logoUrl} nameSize={headerNameSize} />
         <div className="flex shrink-0 items-center gap-1">
-          <div className="hidden sm:flex">
+          <div className="flex scale-90 origin-right">
             <PlatformSeal compact />
           </div>
           <ThemeToggle />
