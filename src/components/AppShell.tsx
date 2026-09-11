@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { BarChart3, CalendarDays, LogOut, Moon, Store, Sun, Sparkles } from "lucide-react";
+import { BarChart3, CalendarDays, LogOut, Moon, Store, Sun, Users } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { BusinessBrand, PlatformSeal } from "@/components/Brand";
@@ -11,7 +11,7 @@ import type { Organization } from "@/types";
 
 const NAV = [
   { to: "/", label: "Hoy", icon: CalendarDays },
-  { to: "/eventos", label: "Eventos", icon: Sparkles },
+  { to: "/eventos", label: "Eventos", icon: Users },
   { to: "/reportes", label: "Reportes", icon: BarChart3 },
   { to: "/negocio", label: "Negocio", icon: Store },
 ] as const;
