@@ -289,12 +289,19 @@ function EventModal({
           />
         </Field>
         {event && (
-          <label className="flex items-center gap-2 text-sm font-medium">
+          <label
+            className={`flex items-center gap-2 text-sm font-semibold ${
+              locked && form.isActive ? "text-primary" : ""
+            }`}
+          >
             <input
               type="checkbox"
               disabled={locked}
               checked={form.isActive}
               onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+              className={`h-4 w-4 accent-[var(--color-primary)] ${
+                locked ? "cursor-not-allowed opacity-100" : ""
+              }`}
             />
             Activo
           </label>
@@ -303,7 +310,7 @@ function EventModal({
         {event && locked ? (
           <button
             onClick={() => setAskUnlock(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+            className="btn-primary flex w-full items-center justify-center gap-2 px-4 py-3 text-base"
           >
             <Pencil className="h-4 w-4" />
             Modificar evento
@@ -313,7 +320,7 @@ function EventModal({
             <button
               onClick={() => save.mutate()}
               disabled={save.isPending}
-              className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              className="btn-primary flex-1 px-3 py-2.5 text-sm"
             >
               Guardar
             </button>
@@ -321,7 +328,7 @@ function EventModal({
               <button
                 aria-label="Eliminar evento"
                 onClick={() => setAskDelete(true)}
-                className="rounded-md border border-border px-3 py-2 text-destructive"
+                className="rounded-md border border-border px-3 py-2 text-destructive transition-colors hover:bg-destructive/10"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

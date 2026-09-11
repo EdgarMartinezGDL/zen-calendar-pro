@@ -1399,6 +1399,8 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           secondaryColor: value.secondaryColor,
           fontFamily: value.fontFamily,
           fontScale: value.fontScale,
+          headerName: value.headerName?.trim() ? value.headerName.trim() : null,
+          headerNameSize: value.headerNameSize ?? "md",
         },
       }),
     onSuccess: () => {
