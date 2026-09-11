@@ -1203,12 +1203,13 @@ function SlotsTab({ orgId }: { orgId: string }) {
 /* ---------------- Configuración ---------------- */
 
 function SettingsTab({ orgId }: { orgId: string }) {
-  const [open, setOpen] = useState<null | "ia" | "marca" | "politica">(null);
+  const [open, setOpen] = useState<null | "ia" | "marca" | "politica" | "cuenta">(null);
 
   const cards = [
     { key: "ia" as const, title: "Asistente de IA", desc: "Nombre, tono y mensajes automáticos." },
     { key: "marca" as const, title: "Marca", desc: "Tema, colores, tipografía y logo." },
     { key: "politica" as const, title: "Política de cancelación", desc: "Plazos y penalizaciones." },
+    { key: "cuenta" as const, title: "Mi Cuenta", desc: "Correo de acceso y contraseña." },
   ];
 
   return (
@@ -1227,6 +1228,8 @@ function SettingsTab({ orgId }: { orgId: string }) {
       {open === "ia" && <AIModal orgId={orgId} onClose={() => setOpen(null)} />}
       {open === "marca" && <BrandingModal orgId={orgId} onClose={() => setOpen(null)} />}
       {open === "politica" && <PolicyModal orgId={orgId} onClose={() => setOpen(null)} />}
+      {open === "cuenta" && <AccountModal onClose={() => setOpen(null)} />}
+
     </>
   );
 }
@@ -1581,6 +1584,93 @@ function PolicyModal({ orgId, onClose }: { orgId: string; onClose: () => void })
           </Field>
         )}
         <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+      </div>
+    </Modal>
+  );
+}
+
+/* ---------------- Mi Cuenta ---------------- */
+
+function AccountModal({ onClose }: { onClose: () => void }) {
+  const email = auth.getUser()?.email ?? "";
+  const [error, setError] = useState<string | null>(null);
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+
+  const valid =
+    current.length > 0 && next.length >= 8 && confirm.length > 0 && next === confirm;
+
+  const save = useMutation({
+    mutationFn: () =>
+      api<null>("/auth/change-password", {
+        method: "POST",
+        body: { currentPassword: current, newPassword: next },
+      }),
+    onSuccess: () => {
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+      setError(null);
+      toast.success("Contraseña actualizada correctamente");
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  return (
+    <Modal open onClose={onClose} title="Mi Cuenta" size="lg">
+      <div className="space-y-6">
+        {error && <Banner kind="error" message={error} />}
+
+        <section className="card-zen space-y-2 p-5">
+          <h3 className="text-lg font-bold">Correo electrónico de acceso</h3>
+          <input className={inputCls} value={email} disabled readOnly aria-label="Correo electrónico de acceso" />
+          <p className="text-sm text-muted-foreground">
+            Para actualizar tu correo de acceso, por favor contacta a soporte técnico.
+          </p>
+        </section>
+
+        <section className="card-zen space-y-4 p-5">
+          <h3 className="text-lg font-bold">Cambiar contraseña</h3>
+          <Field label="Contraseña actual">
+            <input
+              type="password"
+              autoComplete="current-password"
+              className={inputCls}
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+            />
+          </Field>
+          <Field label="Nueva contraseña">
+            <input
+              type="password"
+              autoComplete="new-password"
+              className={inputCls}
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+            />
+          </Field>
+          <p className="-mt-2 text-sm text-muted-foreground">Mínimo 8 caracteres.</p>
+          <Field label="Confirmar nueva contraseña">
+            <input
+              type="password"
+              autoComplete="new-password"
+              className={inputCls}
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          </Field>
+          {confirm.length > 0 && next !== confirm && (
+            <p className="text-sm font-medium text-destructive">Las contraseñas no coinciden.</p>
+          )}
+          <button
+            onClick={() => save.mutate()}
+            disabled={!valid || save.isPending}
+            className="w-full btn-primary px-4 py-3 text-base font-bold text-primary-foreground disabled:opacity-50"
+          >
+            Actualizar contraseña
+          </button>
+        </section>
       </div>
     </Modal>
   );
