@@ -103,8 +103,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Cabecera móvil */}
       <header className="sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-card px-4 py-3 md:hidden">
-        <Brand size="sm" />
+        <BusinessBrand name={businessName} logoUrl={org?.logoUrl} />
         <div className="flex shrink-0 items-center gap-1">
+          <div className="hidden xs:flex sm:flex">
+            <PlatformSeal compact />
+          </div>
           <ThemeToggle />
           <button
             onClick={logout}
