@@ -180,7 +180,7 @@ function ReportesPage() {
         ["Servicio", serviceLabel],
         ["Citas totales", metrics.total],
         ["Citas realizadas", metrics.done],
-        ["Total recaudado (MXN)", metrics.revenue],
+        ["Total de ingresos (MXN)", metrics.revenue],
       ];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(meta), "Resumen");
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(exportRows()), "Citas");
@@ -202,7 +202,7 @@ function ReportesPage() {
         [
           `Periodo: ${rangeLabel} (${from.slice(0, 10)} a ${to.slice(0, 10)})`,
           `Ubicación: ${locationLabel} · Servicio: ${serviceLabel}`,
-          `Citas totales: ${metrics.total} · Realizadas: ${metrics.done} · Recaudado: ${money(metrics.revenue)}`,
+          `Citas totales: ${metrics.total} · Realizadas: ${metrics.done} · Ingresos: ${money(metrics.revenue)}`,
         ],
         14,
         26,
@@ -317,7 +317,7 @@ function ReportesPage() {
             <Tile label="Citas totales" value={metrics.total} />
             <Tile label="Citas realizadas" value={metrics.done} />
             <Tile label="Canceladas" value={metrics.byStatus.CANCELLED} />
-            <Tile label="Total recaudado" value={money(metrics.revenue)} />
+            <Tile label="Total de ingresos" value={money(metrics.revenue)} />
           </div>
 
           <Section title="Citas por estado">
