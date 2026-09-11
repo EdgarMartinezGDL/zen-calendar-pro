@@ -242,7 +242,7 @@ function LocationsTab({ orgId }: { orgId: string }) {
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => setReadOnly(false)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-base font-semibold text-primary-foreground"
+                  className="flex-1 inline-flex items-center justify-center gap-2 btn-primary px-4 py-3 text-base font-semibold text-primary-foreground"
                 >
                   <Pencil className="h-5 w-5" /> Editar
                 </button>
@@ -292,7 +292,7 @@ function LocationsTab({ orgId }: { orgId: string }) {
               <button
                 onClick={() => save.mutate()}
                 disabled={save.isPending || mapsUrlInvalid || !form.name.trim()}
-                className="w-full rounded-md bg-primary px-4 py-3 text-base font-semibold text-primary-foreground disabled:opacity-60"
+                className="w-full btn-primary px-4 py-3 text-base font-semibold text-primary-foreground disabled:opacity-60"
               >
                 Guardar
               </button>
@@ -568,7 +568,7 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
           aria-label="Agregar ubicación al servicio"
           onClick={() => locationId && add.mutate()}
           disabled={!locationId || add.isPending}
-          className="rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+          className="btn-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
           +
         </button>
@@ -1320,7 +1320,7 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
         <button
           onClick={() => save.mutate()}
           disabled={save.isPending}
-          className="w-full rounded-md bg-primary px-4 py-3 text-lg font-semibold text-primary-foreground disabled:opacity-60"
+          className="w-full btn-primary px-4 py-3 text-lg font-semibold text-primary-foreground disabled:opacity-60"
         >
           Guardar
         </button>
@@ -1399,6 +1399,8 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           secondaryColor: value.secondaryColor,
           fontFamily: value.fontFamily,
           fontScale: value.fontScale,
+          headerName: value.headerName?.trim() ? value.headerName.trim() : null,
+          headerNameSize: value.headerNameSize ?? "md",
         },
       }),
     onSuccess: () => {
@@ -1449,7 +1451,7 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           Restablecer colores originales
         </button>
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-4">
-          <span className="rounded-md bg-primary px-4 py-2 text-base font-semibold text-primary-foreground">
+          <span className="btn-primary px-4 py-2 text-base font-semibold text-primary-foreground">
             Botón principal
           </span>
           <span className="text-base font-semibold text-gold">Detalle dorado</span>
@@ -1470,6 +1472,30 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
             <option value="lg">Grande</option>
           </select>
         </Field>
+        <Field label="Nombre visible en cabecera">
+          <input
+            className={big}
+            placeholder={value.name ?? "Mi Negocio"}
+            value={value.headerName ?? ""}
+            onChange={(e) => setForm({ ...form, headerName: e.target.value })}
+          />
+        </Field>
+        <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
+          Si lo dejas vacío se usará el nombre de tu negocio.
+        </p>
+        <Field label="Tamaño de nombre en cabecera">
+          <select
+            className={big}
+            value={value.headerNameSize ?? "md"}
+            onChange={(e) =>
+              setForm({ ...form, headerNameSize: e.target.value as "sm" | "md" | "lg" })
+            }
+          >
+            <option value="sm">Pequeño</option>
+            <option value="md">Normal</option>
+            <option value="lg">Grande</option>
+          </select>
+        </Field>
         <Field label="URL del logo">
           <input
             className={big}
@@ -1486,7 +1512,7 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         <button
           onClick={() => save.mutate()}
           disabled={save.isPending}
-          className="w-full rounded-md bg-primary px-4 py-3 text-lg font-semibold text-primary-foreground disabled:opacity-60"
+          className="w-full btn-primary px-4 py-3 text-lg font-semibold text-primary-foreground disabled:opacity-60"
         >
           Guardar
         </button>
@@ -1591,7 +1617,7 @@ function SaveButton({
     <button
       onClick={onClick}
       disabled={pending}
-      className="w-full flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+      className="w-full flex-1 btn-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
     >
       {label}
     </button>

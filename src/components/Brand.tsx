@@ -50,14 +50,28 @@ export function BusinessBrand({
   logoUrl,
   size = "md",
   center = false,
+  nameSize,
 }: {
   name: string;
   logoUrl?: string | null | undefined;
   size?: "md" | "lg";
   center?: boolean;
+  /** Fuerza el tamaño del nombre; si se omite se ajusta según su longitud. */
+  nameSize?: "sm" | "md" | "lg" | null;
 }) {
-  const logoH = size === "lg" ? "h-16" : "h-10";
-  const titleCls = size === "lg" ? "text-xl md:text-2xl" : "text-base md:text-lg";
+  const logoH = size === "lg" ? "h-16" : "h-12 md:h-14";
+  const len = name.trim().length;
+  const auto: "sm" | "md" | "lg" = len > 28 ? "sm" : len > 16 ? "md" : "lg";
+  const chosen = nameSize ?? auto;
+  const titleCls =
+    size === "lg"
+      ? "text-xl md:text-2xl"
+      : chosen === "sm"
+        ? "text-sm md:text-base"
+        : chosen === "lg"
+          ? "text-lg md:text-xl"
+          : "text-base md:text-lg";
+  const short = len <= 16;
 
   return (
     <div
@@ -67,17 +81,21 @@ export function BusinessBrand({
         <img
           src={logoUrl}
           alt={name}
-          className={`${logoH} w-auto shrink-0 object-contain`}
+          className={`${logoH} my-0.5 w-auto shrink-0 object-contain`}
         />
       ) : (
         <div
           aria-hidden
-          className={`${size === "lg" ? "h-16 w-16 text-lg" : "h-10 w-10 text-sm"} flex shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/15 font-bold tracking-wide text-gold`}
+          className={`${size === "lg" ? "h-16 w-16 text-lg" : "my-0.5 h-12 w-12 text-base md:h-14 md:w-14"} flex shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/15 font-bold tracking-wide text-gold`}
         >
           {initials(name || "MZ")}
         </div>
       )}
-      <p className={`${titleCls} min-w-0 truncate font-bold tracking-tight text-foreground`}>
+      <p
+        className={`${titleCls} min-w-0 font-bold leading-tight tracking-tight text-foreground ${
+          short ? "truncate" : "line-clamp-2 break-words"
+        }`}
+      >
         {name}
       </p>
     </div>

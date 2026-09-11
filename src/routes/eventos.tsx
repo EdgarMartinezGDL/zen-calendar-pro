@@ -289,12 +289,23 @@ function EventModal({
           />
         </Field>
         {event && (
-          <label className="flex items-center gap-2 text-sm font-medium">
+          <label
+            className={`flex items-center gap-2 text-sm font-semibold ${
+              locked && form.isActive ? "text-primary" : ""
+            }`}
+          >
             <input
               type="checkbox"
-              disabled={locked}
+              aria-readonly={locked}
+              tabIndex={locked ? -1 : 0}
               checked={form.isActive}
-              onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+              onChange={(e) => {
+                if (locked) return;
+                setForm({ ...form, isActive: e.target.checked });
+              }}
+              className={`h-4 w-4 accent-[var(--color-primary)] ${
+                locked ? "pointer-events-none cursor-not-allowed" : ""
+              }`}
             />
             Activo
           </label>
@@ -303,7 +314,7 @@ function EventModal({
         {event && locked ? (
           <button
             onClick={() => setAskUnlock(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+            className="btn-primary flex w-full items-center justify-center gap-2 px-4 py-3 text-base"
           >
             <Pencil className="h-4 w-4" />
             Modificar evento
@@ -313,7 +324,7 @@ function EventModal({
             <button
               onClick={() => save.mutate()}
               disabled={save.isPending}
-              className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              className="btn-primary flex-1 px-3 py-2.5 text-sm"
             >
               Guardar
             </button>
@@ -321,7 +332,7 @@ function EventModal({
               <button
                 aria-label="Eliminar evento"
                 onClick={() => setAskDelete(true)}
-                className="rounded-md border border-border px-3 py-2 text-destructive"
+                className="rounded-md border border-border px-3 py-2 text-destructive transition-colors hover:bg-destructive/10"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -332,32 +343,20 @@ function EventModal({
         {event && <Registrations eventId={event.id} capacity={event.capacity} />}
       </div>
 
-      <Modal
+      <Confirm
         open={askUnlock}
-        onClose={() => setAskUnlock(false)}
+        large
+        tone="primary"
         title="Habilitar edición"
-      >
-        <p className="text-sm text-muted-foreground">
-          ¿Deseas habilitar la edición de este evento?
-        </p>
-        <div className="mt-5 flex gap-2">
-          <button
-            onClick={() => setAskUnlock(false)}
-            className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-semibold"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={() => {
-              setAskUnlock(false);
-              setLocked(false);
-            }}
-            className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
-          >
-            Sí, editar
-          </button>
-        </div>
-      </Modal>
+        message="¿Deseas habilitar la edición de este evento?"
+        confirmLabel="Sí, editar"
+        cancelLabel="Cancelar"
+        onCancel={() => setAskUnlock(false)}
+        onConfirm={() => {
+          setAskUnlock(false);
+          setLocked(false);
+        }}
+      />
 
       <Confirm
         open={askDelete}
@@ -413,14 +412,14 @@ function Registrations({ eventId, capacity }: { eventId: string; capacity: numbe
   return (
     <div className="mt-5 rounded-[var(--radius)] border border-border bg-muted/30 p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-bold">Pacientes inscritos</h3>
+        <h3 className="text-sm font-bold">Personas inscritas</h3>
         <span className="rounded-full bg-status-confirmed-bg px-2.5 py-1 text-[11px] font-semibold text-status-confirmed">
           {confirmed.length}/{capacity}
         </span>
       </div>
 
       {confirmed.length === 0 ? (
-        <p className="mb-3 text-xs text-muted-foreground">Aún no hay pacientes inscritos.</p>
+        <p className="mb-3 text-xs text-muted-foreground">Aún no hay personas inscritas.</p>
       ) : (
         <ul className="mb-3 space-y-2">
           {confirmed.map((r) => (
@@ -448,7 +447,7 @@ function Registrations({ eventId, capacity }: { eventId: string; capacity: numbe
         <button
           aria-label="Agregar inscrito"
           onClick={() => add.mutate()}
-          className="shrink-0 rounded-md bg-primary px-3 text-primary-foreground"
+          className="btn-primary shrink-0 px-3"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -456,8 +455,9 @@ function Registrations({ eventId, capacity }: { eventId: string; capacity: numbe
 
       <Confirm
         open={!!toCancel}
+        large
         title="Cancelar inscripción"
-        message={`¿Seguro que deseas cancelar la inscripción de este paciente${toCancel ? ` (${toCancel.clientName})` : ""}?`}
+        message={`¿Seguro que deseas cancelar la inscripción de esta persona${toCancel ? ` (${toCancel.clientName})` : ""}?`}
         confirmLabel="Sí, cancelar"
         cancelLabel="No, volver"
         pending={cancel.isPending}
