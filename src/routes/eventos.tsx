@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
+import { Confirm } from "@/components/Confirm";
 import { Modal } from "@/components/Modal";
 import { Field, inputCls } from "@/routes/index";
 import { api, auth } from "@/lib/api";
@@ -52,10 +53,10 @@ function EventosPage() {
 
       <ul className="space-y-3">
         {(data ?? []).map((ev) => (
-          <li key={ev.id}>
+          <li key={ev.id} className="card-zen p-4">
             <button
               onClick={() => setEditing(ev)}
-              className="card-zen w-full p-4 text-left transition-colors hover:bg-accent/40"
+              className="w-full text-left transition-colors"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -82,6 +83,17 @@ function EventosPage() {
                 </div>
               </div>
             </button>
+            {ev.mapsLink && (
+              <a
+                href={ev.mapsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-accent"
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                Ver ubicación en el mapa
+              </a>
+            )}
           </li>
         ))}
       </ul>
@@ -118,6 +130,9 @@ function EventModal({
 }) {
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const [locked, setLocked] = useState(!!event);
+  const [askUnlock, setAskUnlock] = useState(false);
+  const [askDelete, setAskDelete] = useState(false);
   const [form, setForm] = useState({
     name: event?.name ?? "",
     description: event?.description ?? "",
@@ -126,6 +141,7 @@ function EventModal({
     capacity: String(event?.capacity ?? 10),
     venueName: event?.venueName ?? "",
     venueAddress: event?.venueAddress ?? "",
+    mapsLink: event?.mapsLink ?? "",
     requirements: event?.requirements ?? "",
     isActive: event?.isActive ?? true,
   });
@@ -145,6 +161,7 @@ function EventModal({
         capacity: Number(form.capacity),
         venueName: form.venueName || undefined,
         venueAddress: form.venueAddress || undefined,
+        mapsLink: form.mapsLink.trim() || undefined,
         requirements: form.requirements || undefined,
         isActive: form.isActive,
       };
@@ -162,17 +179,30 @@ function EventModal({
     onError: (e: Error) => setError(e.message),
   });
 
+  const ro = `${inputCls} disabled:cursor-not-allowed disabled:bg-muted/40 disabled:opacity-80`;
+
   return (
-    <Modal open onClose={onClose} title={event ? "Editar evento" : "Nuevo taller o evento"}>
+    <Modal open onClose={onClose} title={event ? "Detalle del evento" : "Nuevo taller o evento"}>
       {error && <Banner kind="error" message={error} />}
       <div className="space-y-3">
+        {event && locked && (
+          <p className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            Modo solo lectura. Pulsa “Modificar evento” para habilitar la edición.
+          </p>
+        )}
         <Field label="Nombre">
-          <input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <input
+            className={ro}
+            disabled={locked}
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
         </Field>
         <Field label="Descripción">
           <textarea
             rows={2}
-            className={inputCls}
+            className={ro}
+            disabled={locked}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
@@ -181,7 +211,8 @@ function EventModal({
           <Field label="Inicio">
             <input
               type="datetime-local"
-              className={inputCls}
+              className={ro}
+              disabled={locked}
               value={form.start}
               onChange={(e) => setForm({ ...form, start: e.target.value })}
             />
@@ -189,7 +220,8 @@ function EventModal({
           <Field label="Fin">
             <input
               type="datetime-local"
-              className={inputCls}
+              className={ro}
+              disabled={locked}
               value={form.end}
               onChange={(e) => setForm({ ...form, end: e.target.value })}
             />
@@ -198,29 +230,60 @@ function EventModal({
         <Field label="Cupo">
           <input
             type="number"
-            className={inputCls}
+            className={ro}
+            disabled={locked}
             value={form.capacity}
             onChange={(e) => setForm({ ...form, capacity: e.target.value })}
           />
         </Field>
         <Field label="Lugar (nombre)">
           <input
-            className={inputCls}
+            className={ro}
+            disabled={locked}
             value={form.venueName}
             onChange={(e) => setForm({ ...form, venueName: e.target.value })}
           />
         </Field>
         <Field label="Dirección">
           <input
-            className={inputCls}
+            className={ro}
+            disabled={locked}
             value={form.venueAddress}
             onChange={(e) => setForm({ ...form, venueAddress: e.target.value })}
           />
         </Field>
+        <div>
+          <Field label="Enlace de Google Maps (opcional)">
+            <input
+              type="url"
+              placeholder="https://maps.app.goo.gl/..."
+              className={ro}
+              disabled={locked}
+              value={form.mapsLink}
+              onChange={(e) => setForm({ ...form, mapsLink: e.target.value })}
+            />
+          </Field>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pega el enlace de ubicación para que los clientes puedan abrirlo directamente desde
+            WhatsApp o el mapa.
+          </p>
+          {form.mapsLink.trim() && (
+            <a
+              href={form.mapsLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-accent"
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              Abrir en el mapa
+            </a>
+          )}
+        </div>
         <Field label="Requisitos">
           <textarea
             rows={2}
-            className={inputCls}
+            className={ro}
+            disabled={locked}
             value={form.requirements}
             onChange={(e) => setForm({ ...form, requirements: e.target.value })}
           />
@@ -229,6 +292,7 @@ function EventModal({
           <label className="flex items-center gap-2 text-sm font-medium">
             <input
               type="checkbox"
+              disabled={locked}
               checked={form.isActive}
               onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
             />
@@ -236,35 +300,84 @@ function EventModal({
           </label>
         )}
 
-        <div className="flex gap-2">
+        {event && locked ? (
           <button
-            onClick={() => save.mutate()}
-            disabled={save.isPending}
-            className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            onClick={() => setAskUnlock(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
           >
-            Guardar
+            <Pencil className="h-4 w-4" />
+            Modificar evento
           </button>
-          {event && (
+        ) : (
+          <div className="flex gap-2">
             <button
-              aria-label="Eliminar evento"
-              onClick={() => remove.mutate()}
-              className="rounded-md border border-border px-3 py-2 text-destructive"
+              onClick={() => save.mutate()}
+              disabled={save.isPending}
+              className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
             >
-              <Trash2 className="h-4 w-4" />
+              Guardar
             </button>
-          )}
-        </div>
+            {event && (
+              <button
+                aria-label="Eliminar evento"
+                onClick={() => setAskDelete(true)}
+                className="rounded-md border border-border px-3 py-2 text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
 
-        {event && <Registrations eventId={event.id} />}
+        {event && <Registrations eventId={event.id} capacity={event.capacity} />}
       </div>
+
+      <Modal
+        open={askUnlock}
+        onClose={() => setAskUnlock(false)}
+        title="Habilitar edición"
+      >
+        <p className="text-sm text-muted-foreground">
+          ¿Deseas habilitar la edición de este evento?
+        </p>
+        <div className="mt-5 flex gap-2">
+          <button
+            onClick={() => setAskUnlock(false)}
+            className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-semibold"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              setAskUnlock(false);
+              setLocked(false);
+            }}
+            className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+          >
+            Sí, editar
+          </button>
+        </div>
+      </Modal>
+
+      <Confirm
+        open={askDelete}
+        message="Se eliminará este evento y sus inscripciones. Esta acción no se puede deshacer."
+        pending={remove.isPending}
+        onCancel={() => setAskDelete(false)}
+        onConfirm={() => {
+          setAskDelete(false);
+          remove.mutate();
+        }}
+      />
     </Modal>
   );
 }
 
-function Registrations({ eventId }: { eventId: string }) {
+function Registrations({ eventId, capacity }: { eventId: string; capacity: number }) {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [toCancel, setToCancel] = useState<EventRegistration | null>(null);
 
   const { data } = useQuery({
     queryKey: ["registrations", eventId],
@@ -289,29 +402,46 @@ function Registrations({ eventId }: { eventId: string }) {
   const cancel = useMutation({
     mutationFn: (regId: string) =>
       api(`/events/${eventId}/registrations/${regId}/cancel`, { method: "PATCH" }),
-    onSuccess: refresh,
+    onSuccess: () => {
+      setToCancel(null);
+      refresh();
+    },
   });
 
+  const confirmed = (data ?? []).filter((r) => r.status === "CONFIRMED");
+
   return (
-    <div className="mt-4 border-t border-border pt-4">
-      <h3 className="mb-2 text-sm font-bold">Inscritos</h3>
-      <ul className="mb-3 space-y-2">
-        {(data ?? [])
-          .filter((r) => r.status === "CONFIRMED")
-          .map((r) => (
-            <li key={r.id} className="flex items-center justify-between gap-3 text-sm">
+    <div className="mt-5 rounded-[var(--radius)] border border-border bg-muted/30 p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-bold">Pacientes inscritos</h3>
+        <span className="rounded-full bg-status-confirmed-bg px-2.5 py-1 text-[11px] font-semibold text-status-confirmed">
+          {confirmed.length}/{capacity}
+        </span>
+      </div>
+
+      {confirmed.length === 0 ? (
+        <p className="mb-3 text-xs text-muted-foreground">Aún no hay pacientes inscritos.</p>
+      ) : (
+        <ul className="mb-3 space-y-2">
+          {confirmed.map((r) => (
+            <li
+              key={r.id}
+              className="flex items-center justify-between gap-3 rounded-md bg-card px-3 py-2 text-sm"
+            >
               <span className="min-w-0 truncate">
                 {r.clientName} · {r.clientPhone}
               </span>
               <button
-                onClick={() => cancel.mutate(r.id)}
+                onClick={() => setToCancel(r)}
                 className="shrink-0 text-xs font-semibold text-destructive"
               >
                 Cancelar
               </button>
             </li>
           ))}
-      </ul>
+        </ul>
+      )}
+
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2">
         <input placeholder="Nombre" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} />
         <input placeholder="Teléfono" className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} />
@@ -323,6 +453,17 @@ function Registrations({ eventId }: { eventId: string }) {
           <Plus className="h-4 w-4" />
         </button>
       </div>
+
+      <Confirm
+        open={!!toCancel}
+        title="Cancelar inscripción"
+        message={`¿Seguro que deseas cancelar la inscripción de este paciente${toCancel ? ` (${toCancel.clientName})` : ""}?`}
+        confirmLabel="Sí, cancelar"
+        cancelLabel="No, volver"
+        pending={cancel.isPending}
+        onCancel={() => setToCancel(null)}
+        onConfirm={() => toCancel && cancel.mutate(toCancel.id)}
+      />
     </div>
   );
 }

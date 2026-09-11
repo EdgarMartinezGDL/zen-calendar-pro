@@ -89,7 +89,7 @@ function HoyPage() {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <p className="flex-1 text-sm font-medium capitalize text-muted-foreground">
+          <p className="flex-1 text-center text-xl font-bold capitalize tracking-tight md:text-2xl">
             {fmtDate(day)}
           </p>
           {offset !== 0 && (
@@ -227,7 +227,7 @@ function DetailModal({
       {error && <Banner kind="error" message={error} />}
 
       {view === "detail" && (
-        <div className="space-y-2 text-sm">
+        <div className="space-y-1">
           <Row label="Cliente" value={appointment.clientName} />
           <Row label="Teléfono" value={appointment.clientPhone} />
           <Row label="Edad" value={appointment.age ? String(appointment.age) : "—"} />
@@ -239,16 +239,16 @@ function DetailModal({
           />
           <Row label="Notas" value={appointment.notes ?? "—"} />
           {editable && (
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-3 pt-5">
               <button
                 onClick={() => setView("reschedule")}
-                className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+                className="flex-1 rounded-lg bg-primary px-4 py-3 text-base font-semibold text-primary-foreground"
               >
                 Reagendar
               </button>
               <button
                 onClick={() => setView("cancel")}
-                className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-semibold text-destructive"
+                className="flex-1 rounded-lg border border-border px-4 py-3 text-base font-semibold text-destructive"
               >
                 Cancelar cita
               </button>
@@ -317,8 +317,28 @@ function NewAppointmentModal({
     serviceId: "",
     date: "",
     time: "",
+    notes: "",
   });
   const [error, setError] = useState<string | null>(null);
+  const [askOptional, setAskOptional] = useState(false);
+
+  const isValid =
+    !!form.clientName.trim() &&
+    !!form.clientPhone.trim() &&
+    !!form.date &&
+    !!form.time &&
+    !!form.locationId;
+
+  const missingOptional = !form.age.trim() || !form.serviceId || !form.notes.trim();
+
+  const submit = () => {
+    if (!isValid) return;
+    if (missingOptional) {
+      setAskOptional(true);
+      return;
+    }
+    create.mutate(false);
+  };
 
   const { data: context } = useQuery({
     queryKey: ["org-context", orgId],
@@ -339,7 +359,8 @@ function NewAppointmentModal({
           clientPhone: form.clientPhone,
           age: form.age ? Number(form.age) : undefined,
           locationId: form.locationId,
-          serviceId: form.serviceId,
+          serviceId: form.serviceId || undefined,
+          notes: form.notes.trim() || undefined,
           startAt: start.toISOString(),
           endAt: end.toISOString(),
         },
@@ -353,14 +374,14 @@ function NewAppointmentModal({
     <Modal open={open} onClose={onClose} title="Nueva cita">
       {error && <Banner kind="error" message={error} />}
       <div className="space-y-3">
-        <Field label="Cliente">
+        <Field label="Cliente *">
           <input
             className={inputCls}
             value={form.clientName}
             onChange={(e) => setForm({ ...form, clientName: e.target.value })}
           />
         </Field>
-        <Field label="Teléfono">
+        <Field label="Teléfono *">
           <input
             className={inputCls}
             value={form.clientPhone}
@@ -375,7 +396,7 @@ function NewAppointmentModal({
             onChange={(e) => setForm({ ...form, age: e.target.value })}
           />
         </Field>
-        <Field label="Ubicación">
+        <Field label="Ubicación *">
           <select
             className={inputCls}
             value={form.locationId}
@@ -389,7 +410,7 @@ function NewAppointmentModal({
             ))}
           </select>
         </Field>
-        <Field label="Servicio">
+        <Field label="Servicio (opcional)">
           <select
             className={inputCls}
             value={form.serviceId}
@@ -404,7 +425,7 @@ function NewAppointmentModal({
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Fecha">
+          <Field label="Fecha *">
             <input
               type="date"
               className={inputCls}
@@ -412,7 +433,7 @@ function NewAppointmentModal({
               onChange={(e) => setForm({ ...form, date: e.target.value })}
             />
           </Field>
-          <Field label="Hora">
+          <Field label="Hora *">
             <input
               type="time"
               className={inputCls}
@@ -421,9 +442,22 @@ function NewAppointmentModal({
             />
           </Field>
         </div>
+        <Field label="Notas (opcional)">
+          <textarea
+            rows={2}
+            className={inputCls}
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
+        </Field>
+        {!isValid && (
+          <p className="text-xs text-muted-foreground">
+            Completa los campos obligatorios (*) para poder agendar.
+          </p>
+        )}
         <button
-          disabled={create.isPending}
-          onClick={() => create.mutate(false)}
+          disabled={create.isPending || !isValid}
+          onClick={submit}
           className="w-full rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
         >
           Agendar cita
@@ -437,6 +471,33 @@ function NewAppointmentModal({
           </button>
         )}
       </div>
+
+      <Modal
+        open={askOptional}
+        onClose={() => setAskOptional(false)}
+        title="Campos opcionales sin rellenar"
+      >
+        <p className="text-sm text-muted-foreground">
+          Hay campos opcionales sin rellenar. ¿Deseas agendar la cita de todos modos?
+        </p>
+        <div className="mt-5 flex gap-2">
+          <button
+            onClick={() => setAskOptional(false)}
+            className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-semibold"
+          >
+            No, revisar
+          </button>
+          <button
+            onClick={() => {
+              setAskOptional(false);
+              create.mutate(false);
+            }}
+            className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+          >
+            Sí, agendar
+          </button>
+        </div>
+      </Modal>
     </Modal>
   );
 }
@@ -455,9 +516,11 @@ export function Field({ label, children }: { label: string; children: React.Reac
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-border py-1.5 last:border-0">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
+    <div className="border-b border-border py-3 last:border-0">
+      <span className="block text-sm font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <span className="mt-0.5 block text-lg font-semibold leading-snug md:text-xl">{value}</span>
     </div>
   );
 }
