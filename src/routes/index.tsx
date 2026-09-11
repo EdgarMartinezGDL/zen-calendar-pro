@@ -317,8 +317,28 @@ function NewAppointmentModal({
     serviceId: "",
     date: "",
     time: "",
+    notes: "",
   });
   const [error, setError] = useState<string | null>(null);
+  const [askOptional, setAskOptional] = useState(false);
+
+  const isValid =
+    !!form.clientName.trim() &&
+    !!form.clientPhone.trim() &&
+    !!form.date &&
+    !!form.time &&
+    !!form.locationId;
+
+  const missingOptional = !form.age.trim() || !form.serviceId || !form.notes.trim();
+
+  const submit = () => {
+    if (!isValid) return;
+    if (missingOptional) {
+      setAskOptional(true);
+      return;
+    }
+    create.mutate(false);
+  };
 
   const { data: context } = useQuery({
     queryKey: ["org-context", orgId],
