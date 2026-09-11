@@ -53,10 +53,10 @@ function EventosPage() {
 
       <ul className="space-y-3">
         {(data ?? []).map((ev) => (
-          <li key={ev.id}>
+          <li key={ev.id} className="card-zen p-4">
             <button
               onClick={() => setEditing(ev)}
-              className="card-zen w-full p-4 text-left transition-colors hover:bg-accent/40"
+              className="w-full text-left transition-colors"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
