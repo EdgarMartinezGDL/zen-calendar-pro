@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { BusinessBrand, PlatformSeal } from "@/components/Brand";
 import { api, auth } from "@/lib/api";
+import { applyBranding } from "@/lib/branding";
 import { useTheme } from "@/lib/theme";
 import type { Organization } from "@/types";
 
@@ -45,6 +46,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     enabled: !!orgId,
   });
   const businessName = org?.name ?? "Mi Negocio";
+
+  useEffect(() => {
+    if (org) applyBranding(org);
+  }, [org]);
 
   useEffect(() => {
     const current = auth.getUser();

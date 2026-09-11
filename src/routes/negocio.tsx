@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Copy, Pencil, Trash2 } from "lucide-react";
+import { Copy, MapPin, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 
@@ -10,6 +10,7 @@ import { Modal } from "@/components/Modal";
 import { Confirm } from "@/components/Confirm";
 import { Field, inputCls } from "@/routes/index";
 import { api, auth } from "@/lib/api";
+import { applyBranding } from "@/lib/branding";
 import type {
   AISettings,
   AppointmentSlot,
@@ -108,13 +109,21 @@ function LocationsTab({ orgId }: { orgId: string }) {
     queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
   });
 
-  const [form, setForm] = useState({ name: "", address: "", phone: "", email: "", isActive: true });
+  const [form, setForm] = useState({
+    name: "",
+    address: "",
+    mapsUrl: "",
+    phone: "",
+    email: "",
+    isActive: true,
+  });
 
   const open = (loc: Location | null) => {
     setError(null);
     setForm({
       name: loc?.name ?? "",
       address: loc?.address ?? "",
+      mapsUrl: loc?.mapsUrl ?? "",
       phone: loc?.phone ?? "",
       email: loc?.email ?? "",
       isActive: loc?.isActive ?? true,
@@ -135,6 +144,7 @@ function LocationsTab({ orgId }: { orgId: string }) {
       const body = {
         name: form.name,
         address: form.address || undefined,
+        mapsUrl: form.mapsUrl.trim() || null,
         phone: form.phone || undefined,
         email: form.email || undefined,
         isActive: form.isActive,
@@ -165,15 +175,39 @@ function LocationsTab({ orgId }: { orgId: string }) {
     },
   });
 
+  const mapsUrlInvalid = form.mapsUrl.trim() !== "" && !/^https?:\/\/\S+$/i.test(form.mapsUrl.trim());
+  const bigInput = `${inputCls} h-12 text-base`;
+
   return (
     <>
       <CardList>
         {(data ?? []).map((l) => (
           <li key={l.id}>
-            <button onClick={() => open(l)} className="card-zen w-full p-4 text-left hover:bg-accent/40">
-              <p className="font-semibold">{l.name}</p>
-              <p className="text-xs text-muted-foreground">{l.address ?? "Sin dirección"}</p>
-              {!l.isActive && <span className="text-xs text-status-completed">Inactiva</span>}
+            <button onClick={() => open(l)} className="card-zen w-full p-6 text-left hover:bg-accent/40">
+              <p className="text-xl font-bold">{l.name}</p>
+              <p className="mt-1 text-base text-muted-foreground">{l.address ?? "Sin dirección"}</p>
+              {l.mapsUrl && (
+                <span
+                  role="link"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(l.mapsUrl!, "_blank", "noopener");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.stopPropagation();
+                      window.open(l.mapsUrl!, "_blank", "noopener");
+                    }
+                  }}
+                  className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-base font-semibold text-primary"
+                >
+                  <MapPin className="h-5 w-5" /> Abrir en Maps
+                </span>
+              )}
+              {!l.isActive && (
+                <span className="mt-2 block text-base text-status-completed">Inactiva</span>
+              )}
             </button>
           </li>
         ))}
@@ -189,49 +223,79 @@ function LocationsTab({ orgId }: { orgId: string }) {
           {error && <Banner kind="error" message={error} />}
 
           {editing && readOnly ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <ReadRow label="Nombre" value={editing.name} />
               <ReadRow label="Dirección" value={editing.address} />
               <ReadRow label="Teléfono" value={editing.phone} />
               <ReadRow label="Correo" value={editing.email} />
               <ReadRow label="Estado" value={editing.isActive ? "Activa" : "Inactiva"} />
+              {editing.mapsUrl && (
+                <a
+                  href={editing.mapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-3 text-base font-semibold text-primary"
+                >
+                  <MapPin className="h-5 w-5" /> Abrir en Maps
+                </a>
+              )}
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => setReadOnly(false)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-base font-semibold text-primary-foreground"
                 >
-                  <Pencil className="h-4 w-4" /> Editar
+                  <Pencil className="h-5 w-5" /> Editar
                 </button>
                 <button
                   aria-label="Eliminar ubicación"
                   onClick={() => setConfirming(true)}
-                  className="rounded-md border border-border px-3 py-2 text-destructive"
+                  className="rounded-md border border-border px-4 py-3 text-destructive"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5" />
                 </button>
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4 text-base">
               <Field label="Nombre">
-                <input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <input className={bigInput} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </Field>
               <Field label="Dirección">
-                <input className={inputCls} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <input className={bigInput} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
               </Field>
+              <Field label="Enlace de Google Maps">
+                <input
+                  type="url"
+                  className={bigInput}
+                  placeholder="https://maps.app.goo.gl/..."
+                  value={form.mapsUrl}
+                  onChange={(e) => setForm({ ...form, mapsUrl: e.target.value })}
+                />
+              </Field>
+              {mapsUrlInvalid && (
+                <p className="-mt-2 text-sm text-destructive">
+                  Ingresa un enlace válido que empiece con https://
+                </p>
+              )}
               <Field label="Teléfono">
-                <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <input className={bigInput} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               </Field>
               <Field label="Correo">
-                <input className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <input className={bigInput} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </Field>
               {editing && (
-                <label className="flex items-center gap-2 text-sm font-medium">
+                <label className="flex items-center gap-2 text-base font-medium">
                   <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
                   Activa
                 </label>
               )}
-              <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+              <button
+                onClick={() => save.mutate()}
+                disabled={save.isPending || mapsUrlInvalid || !form.name.trim()}
+                className="w-full rounded-md bg-primary px-4 py-3 text-base font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                Guardar
+              </button>
             </div>
           )}
         </Modal>
@@ -250,9 +314,9 @@ function LocationsTab({ orgId }: { orgId: string }) {
 
 function ReadRow({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="border-b border-border pb-2">
-      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p className="text-sm">{value?.trim() ? value : "—"}</p>
+    <div className="border-b border-border pb-3">
+      <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+      <p className="text-lg">{value?.trim() ? value : "—"}</p>
     </div>
   );
 }
@@ -1194,19 +1258,54 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
     onError: (e: Error) => setError(e.message),
   });
 
+  const tone = value.tone ?? TONES[0]!;
+  const isPreset = TONES.includes(tone);
+  const [customTone, setCustomTone] = useState(!isPreset && !!tone);
+  const big = `${inputCls} h-12 text-lg`;
+
   return (
     <Modal open onClose={onClose} title="Asistente de IA">
       {error && <Banner kind="error" message={error} />}
-      <div className="space-y-3">
+      <div className="space-y-5 text-lg">
         <Check label="Activo" checked={!!value.enabled} onChange={(v) => setForm({ ...form, enabled: v })} />
         <Field label="Nombre del asistente">
-          <input className={inputCls} value={value.assistantName ?? ""} onChange={(e) => setForm({ ...form, assistantName: e.target.value })} />
+          <input className={big} value={value.assistantName ?? ""} onChange={(e) => setForm({ ...form, assistantName: e.target.value })} />
         </Field>
         <Field label="Tono">
-          <input className={inputCls} value={value.tone ?? ""} onChange={(e) => setForm({ ...form, tone: e.target.value })} />
+          <select
+            className={big}
+            value={customTone ? "__custom__" : isPreset ? tone : TONES[0]}
+            onChange={(e) => {
+              if (e.target.value === "__custom__") {
+                setCustomTone(true);
+                setForm({ ...form, tone: "" });
+              } else {
+                setCustomTone(false);
+                setForm({ ...form, tone: e.target.value });
+              }
+            }}
+          >
+            {TONES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+            <option value="__custom__">Personalizado…</option>
+          </select>
         </Field>
+        {customTone && (
+          <Field label="Tono personalizado">
+            <textarea
+              rows={2}
+              className={`${inputCls} text-lg`}
+              placeholder="Describe con tus palabras el tono que deseas…"
+              value={value.tone ?? ""}
+              onChange={(e) => setForm({ ...form, tone: e.target.value })}
+            />
+          </Field>
+        )}
         <Field label="Mensaje de bienvenida">
-          <textarea rows={2} className={inputCls} value={value.welcomeMessage ?? ""} onChange={(e) => setForm({ ...form, welcomeMessage: e.target.value })} />
+          <textarea rows={3} className={`${inputCls} text-lg`} value={value.welcomeMessage ?? ""} onChange={(e) => setForm({ ...form, welcomeMessage: e.target.value })} />
         </Field>
         <Check
           label="Enviar en el primer mensaje"
@@ -1214,15 +1313,28 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
           onChange={(v) => setForm({ ...form, sendWelcomeOnFirstMessage: v })}
         />
         <Field label="Mensaje de respaldo">
-          <textarea rows={2} className={inputCls} value={value.fallbackMessage ?? ""} onChange={(e) => setForm({ ...form, fallbackMessage: e.target.value })} />
+          <textarea rows={3} className={`${inputCls} text-lg`} value={value.fallbackMessage ?? ""} onChange={(e) => setForm({ ...form, fallbackMessage: e.target.value })} />
         </Field>
         <Check label="Formato WhatsApp" checked={!!value.formatWhatsappText} onChange={(v) => setForm({ ...form, formatWhatsappText: v })} />
-        <Check label="Permitir takeover humano" checked={!!value.allowHumanTakeover} onChange={(v) => setForm({ ...form, allowHumanTakeover: v })} />
-        <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+        <Check label="Permitir que un humano tome el control" checked={!!value.allowHumanTakeover} onChange={(v) => setForm({ ...form, allowHumanTakeover: v })} />
+        <button
+          onClick={() => save.mutate()}
+          disabled={save.isPending}
+          className="w-full rounded-md bg-primary px-4 py-3 text-lg font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          Guardar
+        </button>
       </div>
     </Modal>
   );
 }
+
+const TONES = [
+  "Cálido y profesional",
+  "Empático y cercano",
+  "Formal y clínico",
+  "Directo y conciso",
+];
 
 const FONTS = ["Inter", "Plus Jakarta Sans", "Roboto", "Lato", "Merriweather"];
 
@@ -1266,6 +1378,13 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
   const [form, setForm] = useState<Partial<Organization>>({});
   const value = { ...(data ?? {}), ...form } as Organization;
 
+  const qc = useQueryClient();
+
+  // Aplica colores y tipografía en vivo mientras se editan
+  useEffect(() => {
+    applyBranding(value);
+  }, [value.primaryColor, value.secondaryColor, value.fontFamily, value.fontScale]);
+
   const save = useMutation({
     mutationFn: () =>
       api(`/organizations/${orgId}/branding`, {
@@ -1279,37 +1398,49 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           fontScale: value.fontScale,
         },
       }),
-    onSuccess: onClose,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["organization"] });
+      toast.success("Marca actualizada");
+      onClose();
+    },
     onError: (e: Error) => setError(e.message),
   });
+
+  const big = `${inputCls} h-12 text-lg`;
 
   return (
     <Modal open onClose={onClose} title="Marca">
       {error && <Banner kind="error" message={error} />}
-      <div className="space-y-3">
+      <div className="space-y-5 text-lg">
         <Field label="Tema">
-          <select className={inputCls} value={value.theme ?? "auto"} onChange={(e) => setForm({ ...form, theme: e.target.value as Organization["theme"] })}>
+          <select className={big} value={value.theme ?? "auto"} onChange={(e) => setForm({ ...form, theme: e.target.value as Organization["theme"] })}>
             <option value="light">Claro</option>
             <option value="dark">Oscuro</option>
             <option value="auto">Automático</option>
           </select>
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Color primario">
-            <div className="flex gap-2">
-              <input type="color" value={value.primaryColor ?? "#0F766E"} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} className="h-9 w-10 rounded-md border border-input" />
-              <input className={inputCls} value={value.primaryColor ?? ""} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} />
+            <div className="flex gap-3">
+              <input aria-label="Selector de color primario" type="color" value={value.primaryColor ?? "#0F766E"} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} className="h-12 w-14 rounded-md border border-input" />
+              <input className={big} placeholder="#0F766E" value={value.primaryColor ?? ""} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} />
             </div>
           </Field>
           <Field label="Color secundario">
-            <div className="flex gap-2">
-              <input type="color" value={value.secondaryColor ?? "#D97706"} onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })} className="h-9 w-10 rounded-md border border-input" />
-              <input className={inputCls} value={value.secondaryColor ?? ""} onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })} />
+            <div className="flex gap-3">
+              <input aria-label="Selector de color secundario" type="color" value={value.secondaryColor ?? "#D97706"} onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })} className="h-12 w-14 rounded-md border border-input" />
+              <input className={big} placeholder="#D97706" value={value.secondaryColor ?? ""} onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })} />
             </div>
           </Field>
         </div>
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-4">
+          <span className="rounded-md bg-primary px-4 py-2 text-base font-semibold text-primary-foreground">
+            Botón principal
+          </span>
+          <span className="text-base font-semibold text-gold">Detalle dorado</span>
+        </div>
         <Field label="Tipografía">
-          <select className={inputCls} value={value.fontFamily ?? "Inter"} onChange={(e) => setForm({ ...form, fontFamily: e.target.value })}>
+          <select className={big} value={value.fontFamily ?? "Inter"} onChange={(e) => setForm({ ...form, fontFamily: e.target.value })}>
             {FONTS.map((f) => (
               <option key={f} value={f}>
                 {f}
@@ -1318,7 +1449,7 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           </select>
         </Field>
         <Field label="Tamaño de texto">
-          <select className={inputCls} value={value.fontScale ?? "md"} onChange={(e) => setForm({ ...form, fontScale: e.target.value as Organization["fontScale"] })}>
+          <select className={big} value={value.fontScale ?? "md"} onChange={(e) => setForm({ ...form, fontScale: e.target.value as Organization["fontScale"] })}>
             <option value="sm">Chico</option>
             <option value="md">Normal</option>
             <option value="lg">Grande</option>
@@ -1326,18 +1457,24 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         </Field>
         <Field label="URL del logo">
           <input
-            className={inputCls}
+            className={big}
             placeholder="https://.../mi-logo.png"
             value={value.logoUrl ?? ""}
             onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
           />
         </Field>
-        <p className="-mt-1 text-xs leading-relaxed text-muted-foreground">
+        <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
           Pega el enlace directo a tu imagen (.png, .jpg o .webp). Puedes alojarla en servicios como
           postimages.org o imgbb.com (copiando la opción «Enlace directo»).
         </p>
         <LogoPreview url={value.logoUrl ?? ""} />
-        <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+        <button
+          onClick={() => save.mutate()}
+          disabled={save.isPending}
+          className="w-full rounded-md bg-primary px-4 py-3 text-lg font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          Guardar
+        </button>
       </div>
     </Modal>
   );

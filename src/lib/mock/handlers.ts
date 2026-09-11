@@ -391,6 +391,7 @@ export function handleMockRequest(path: string, method: string, body: Body | nul
         id: newId("loc"),
         name: String(b['name'] ?? "Nueva ubicación"),
         address: (b['address'] as string | null) ?? null,
+        mapsUrl: (b['mapsUrl'] as string | null) ?? null,
         phone: (b['phone'] as string | null) ?? null,
         email: (b['email'] as string | null) ?? null,
         timezone: String(b['timezone'] ?? "America/Mexico_City"),
