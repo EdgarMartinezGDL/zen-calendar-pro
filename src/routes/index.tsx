@@ -95,7 +95,7 @@ function HoyPage() {
           {offset !== 0 && (
             <button
               onClick={() => setOffset(0)}
-              className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+              className="btn-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
             >
               Hoy
             </button>
@@ -242,7 +242,7 @@ function DetailModal({
             <div className="flex gap-3 pt-5">
               <button
                 onClick={() => setView("reschedule")}
-                className="flex-1 rounded-lg bg-primary px-4 py-3 text-base font-semibold text-primary-foreground"
+                className="flex-1 btn-primary px-4 py-3 text-base font-semibold text-primary-foreground"
               >
                 Reagendar
               </button>
@@ -268,7 +268,7 @@ function DetailModal({
           <button
             disabled={!date || !time || rescheduleM.isPending}
             onClick={() => rescheduleM.mutate()}
-            className="w-full rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            className="w-full btn-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
           >
             Confirmar nueva fecha
           </button>
@@ -458,7 +458,7 @@ function NewAppointmentModal({
         <button
           disabled={create.isPending || !isValid}
           onClick={submit}
-          className="w-full rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          className="w-full btn-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
         >
           Agendar cita
         </button>
@@ -492,7 +492,7 @@ function NewAppointmentModal({
               setAskOptional(false);
               create.mutate(false);
             }}
-            className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+            className="flex-1 btn-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
           >
             Sí, agendar
           </button>

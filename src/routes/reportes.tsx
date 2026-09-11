@@ -291,7 +291,7 @@ function ReportesPage() {
         <div className="flex flex-col gap-2 sm:flex-row">
           <button
             onClick={downloadExcel}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+            className="inline-flex flex-1 items-center justify-center gap-2 btn-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
           >
             <FileSpreadsheet className="h-4 w-4" /> Descargar Excel (.xlsx)
           </button>
