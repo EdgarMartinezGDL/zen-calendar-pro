@@ -1470,6 +1470,30 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
             <option value="lg">Grande</option>
           </select>
         </Field>
+        <Field label="Nombre visible en cabecera">
+          <input
+            className={big}
+            placeholder={value.name ?? "Mi Negocio"}
+            value={value.headerName ?? ""}
+            onChange={(e) => setForm({ ...form, headerName: e.target.value })}
+          />
+        </Field>
+        <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
+          Si lo dejas vacío se usará el nombre de tu negocio.
+        </p>
+        <Field label="Tamaño de nombre en cabecera">
+          <select
+            className={big}
+            value={value.headerNameSize ?? "md"}
+            onChange={(e) =>
+              setForm({ ...form, headerNameSize: e.target.value as Organization["headerNameSize"] })
+            }
+          >
+            <option value="sm">Pequeño</option>
+            <option value="md">Normal</option>
+            <option value="lg">Grande</option>
+          </select>
+        </Field>
         <Field label="URL del logo">
           <input
             className={big}
