@@ -239,16 +239,16 @@ function DetailModal({
           />
           <Row label="Notas" value={appointment.notes ?? "—"} />
           {editable && (
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-3 pt-5">
               <button
                 onClick={() => setView("reschedule")}
-                className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+                className="flex-1 rounded-lg bg-primary px-4 py-3 text-base font-semibold text-primary-foreground"
               >
                 Reagendar
               </button>
               <button
                 onClick={() => setView("cancel")}
-                className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-semibold text-destructive"
+                className="flex-1 rounded-lg border border-border px-4 py-3 text-base font-semibold text-destructive"
               >
                 Cancelar cita
               </button>
