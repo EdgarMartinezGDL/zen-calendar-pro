@@ -1620,7 +1620,7 @@ function AccountModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal open onClose={onClose} title="Mi Cuenta" size="lg">
       <div className="space-y-6">
-        {error && <Banner tone="error" message={error} />}
+        {error && <Banner kind="error" message={error} />}
 
         <section className="card-zen space-y-2 p-5">
           <h3 className="text-lg font-bold">Correo electrónico de acceso</h3>
