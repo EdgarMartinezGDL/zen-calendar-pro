@@ -343,32 +343,20 @@ function EventModal({
         {event && <Registrations eventId={event.id} capacity={event.capacity} />}
       </div>
 
-      <Modal
+      <Confirm
         open={askUnlock}
-        onClose={() => setAskUnlock(false)}
+        large
+        tone="primary"
         title="Habilitar edición"
-      >
-        <p className="text-sm text-muted-foreground">
-          ¿Deseas habilitar la edición de este evento?
-        </p>
-        <div className="mt-5 flex gap-2">
-          <button
-            onClick={() => setAskUnlock(false)}
-            className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-semibold"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={() => {
-              setAskUnlock(false);
-              setLocked(false);
-            }}
-            className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
-          >
-            Sí, editar
-          </button>
-        </div>
-      </Modal>
+        message="¿Deseas habilitar la edición de este evento?"
+        confirmLabel="Sí, editar"
+        cancelLabel="Cancelar"
+        onCancel={() => setAskUnlock(false)}
+        onConfirm={() => {
+          setAskUnlock(false);
+          setLocked(false);
+        }}
+      />
 
       <Confirm
         open={askDelete}
