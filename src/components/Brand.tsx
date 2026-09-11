@@ -72,7 +72,7 @@ export function BusinessBrand({
       ) : (
         <div
           aria-hidden
-          className={`${size === "lg" ? "h-16 w-16 text-lg" : "h-10 w-10 text-sm"} flex shrink-0 items-center justify-center rounded-full bg-gold-soft font-bold tracking-wide text-gold`}
+          className={`${size === "lg" ? "h-16 w-16 text-lg" : "h-10 w-10 text-sm"} flex shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/15 font-bold tracking-wide text-gold`}
         >
           {initials(name || "MZ")}
         </div>
