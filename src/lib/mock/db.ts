@@ -49,6 +49,7 @@ function seed(): MockDb {
       id: "loc-1",
       name: "Consultorio Centro",
       address: "Av. Reforma 245, Col. Juárez",
+      mapsUrl: "https://maps.app.goo.gl/ejemplo-centro",
       phone: "55 1234 5678",
       email: "centro@miagendazen.mx",
       timezone: "America/Mexico_City",
