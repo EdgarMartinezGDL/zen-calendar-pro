@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Copy, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Copy, MapPin, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 
@@ -1338,6 +1338,9 @@ const TONES = [
 
 const FONTS = ["Inter", "Plus Jakarta Sans", "Roboto", "Lato", "Merriweather"];
 
+const DEFAULT_PRIMARY = "#0F766E";
+const DEFAULT_SECONDARY = "#D97706";
+
 function LogoPreview({ url }: { url: string }) {
   const [failed, setFailed] = useState(false);
   const src = url.trim();
@@ -1433,6 +1436,18 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
             </div>
           </Field>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            setForm({ ...form, primaryColor: DEFAULT_PRIMARY, secondaryColor: DEFAULT_SECONDARY });
+            applyBranding({ ...value, primaryColor: DEFAULT_PRIMARY, secondaryColor: DEFAULT_SECONDARY });
+            toast.success("Colores restablecidos a los valores originales");
+          }}
+          className="inline-flex items-center gap-2 rounded-md border border-input px-4 py-2 text-base font-medium text-foreground transition-colors hover:bg-accent"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Restablecer colores originales
+        </button>
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-4">
           <span className="rounded-md bg-primary px-4 py-2 text-base font-semibold text-primary-foreground">
             Botón principal
