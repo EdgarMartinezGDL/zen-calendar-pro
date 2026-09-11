@@ -6,11 +6,16 @@ export function Modal({
   onClose,
   title,
   children,
+  centered = false,
+  size = "md",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /** Centra el diálogo también en móvil (en vez de hoja inferior). */
+  centered?: boolean;
+  size?: "md" | "lg";
 }) {
   useEffect(() => {
     if (!open) return;
@@ -22,11 +27,21 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 backdrop-blur-sm md:items-center">
+    <div
+      className={`fixed inset-0 z-50 flex justify-center bg-foreground/50 backdrop-blur-sm md:items-center ${
+        centered ? "items-center p-4" : "items-end"
+      }`}
+    >
       <div className="absolute inset-0" onClick={onClose} aria-hidden />
-      <div className="card-zen relative z-10 max-h-[88vh] w-full overflow-y-auto rounded-b-none p-5 md:max-w-lg md:rounded-b-[var(--radius-lg)]">
+      <div
+        className={`card-zen relative z-10 max-h-[88vh] w-full overflow-y-auto ${
+          centered
+            ? "rounded-[var(--radius-lg)] p-7"
+            : "rounded-b-none p-5 md:rounded-b-[var(--radius-lg)]"
+        } ${size === "lg" ? "md:max-w-xl" : "md:max-w-lg"}`}
+      >
         <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 className="text-lg font-bold">{title}</h2>
+          <h2 className={`${size === "lg" ? "text-2xl" : "text-lg"} font-bold`}>{title}</h2>
           <button
             onClick={onClose}
             aria-label="Cerrar"

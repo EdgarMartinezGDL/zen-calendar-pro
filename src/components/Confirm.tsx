@@ -7,6 +7,8 @@ export function Confirm({
   confirmLabel = "Sí, eliminar",
   cancelLabel = "Cancelar",
   pending,
+  large = false,
+  tone = "danger",
   onConfirm,
   onCancel,
 }: {
@@ -16,16 +18,34 @@ export function Confirm({
   confirmLabel?: string;
   cancelLabel?: string;
   pending?: boolean;
+  /** Diálogo centrado y de mayor escala. */
+  large?: boolean;
+  tone?: "danger" | "primary";
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const confirmCls =
+    tone === "primary"
+      ? "btn-primary"
+      : "rounded-md bg-destructive font-bold text-destructive-foreground transition-[filter] hover:brightness-110 active:brightness-90 disabled:opacity-60";
+
   return (
-    <Modal open={open} onClose={onCancel} title={title}>
-      <p className="text-sm text-muted-foreground">{message}</p>
-      <div className="mt-5 flex gap-2">
+    <Modal
+      open={open}
+      onClose={onCancel}
+      title={title}
+      centered={large}
+      size={large ? "lg" : "md"}
+    >
+      <p className={`${large ? "text-lg leading-relaxed" : "text-sm"} text-muted-foreground`}>
+        {message}
+      </p>
+      <div className={`${large ? "mt-8 gap-4" : "mt-5 gap-2"} flex flex-col sm:flex-row`}>
         <button
           onClick={onCancel}
-          className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-semibold"
+          className={`flex-1 rounded-md border border-border font-semibold transition-colors hover:bg-accent ${
+            large ? "px-5 py-3.5 text-lg" : "px-3 py-2 text-sm"
+          }`}
         >
           {cancelLabel}
         </button>
@@ -33,7 +53,7 @@ export function Confirm({
         <button
           onClick={onConfirm}
           disabled={pending}
-          className="flex-1 rounded-md bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-60"
+          className={`flex-1 ${confirmCls} ${large ? "px-5 py-3.5 text-lg" : "px-3 py-2 text-sm"} disabled:opacity-60`}
         >
           {confirmLabel}
         </button>

@@ -308,6 +308,8 @@ function seed(): MockDb {
       secondaryColor: "#D97706",
       fontFamily: "Plus Jakarta Sans",
       fontScale: "md",
+      headerName: null,
+      headerNameSize: "md",
     },
     locations,
     services,
