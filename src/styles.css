@@ -142,3 +142,35 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
+
+/* Botón principal de acción: verde saturado, texto en negrita y estados claros. */
+@utility btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  font-weight: 700;
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  transition:
+    filter 0.15s ease,
+    transform 0.1s ease;
+
+  &:hover {
+    filter: brightness(1.12) saturate(1.08);
+  }
+
+  &:active {
+    filter: brightness(0.92);
+    transform: translateY(1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    filter: none;
+    transform: none;
+  }
+}
