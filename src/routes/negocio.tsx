@@ -1460,6 +1460,8 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           </span>
           <span className="text-base font-semibold text-gold">Detalle dorado</span>
         </div>
+        <hr className="border-border" />
+        <h3 className="text-lg font-bold text-foreground">Estilo de la App</h3>
         <Field label="Tipografía">
           <select className={big} value={value.fontFamily ?? "Inter"} onChange={(e) => setForm({ ...form, fontFamily: e.target.value })}>
             {FONTS.map((f) => (
@@ -1476,6 +1478,8 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
             <option value="lg">Grande</option>
           </select>
         </Field>
+        <hr className="border-border" />
+        <h3 className="text-lg font-bold text-foreground">Identidad en Cabecera</h3>
         <Field label="Nombre visible en cabecera">
           <input
             className={big}

@@ -48,6 +48,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const businessName = org?.headerName?.trim() || org?.name || "Mi Negocio";
   const headerNameSize = org?.headerNameSize ?? null;
   const mobileLong = businessName.trim().length > 16;
+  const mobileNameCls =
+    headerNameSize === "sm"
+      ? "text-sm"
+      : headerNameSize === "lg"
+        ? "text-xl"
+        : headerNameSize === "md"
+          ? "text-base"
+          : mobileLong
+            ? "text-sm"
+            : "text-base";
   const mobileInitials = businessName
     .split(/\s+/)
     .filter(Boolean)
@@ -115,28 +125,26 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Cabecera móvil */}
-      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-card px-3 py-2 md:hidden">
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-card px-3 py-0 md:hidden">
         {/* Bloque izquierdo: logo + nombre */}
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex h-full min-w-0 flex-1 items-center gap-2">
           {org?.logoUrl ? (
             <img
               src={org.logoUrl}
               alt={businessName}
-              className="h-11 w-auto max-w-[3.5rem] shrink-0 object-contain"
+              className="h-14 max-h-[92%] w-auto max-w-[4.5rem] shrink-0 object-contain"
             />
           ) : (
             <div
               aria-hidden
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/15 text-sm font-bold tracking-wide text-gold"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/15 text-base font-bold tracking-wide text-gold"
             >
               {mobileInitials}
             </div>
           )}
           <p
-            className={`min-w-0 flex-1 font-bold tracking-tight text-foreground ${
-              mobileLong
-                ? "line-clamp-2 break-words text-sm leading-tight"
-                : "truncate text-base leading-tight"
+            className={`min-w-0 flex-1 font-bold leading-tight tracking-tight text-foreground ${mobileNameCls} ${
+              mobileLong ? "line-clamp-2 break-words" : "truncate"
             }`}
           >
             {businessName}
