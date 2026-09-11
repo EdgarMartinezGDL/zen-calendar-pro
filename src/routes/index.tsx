@@ -455,9 +455,11 @@ export function Field({ label, children }: { label: string; children: React.Reac
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-border py-1.5 last:border-0">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
+    <div className="border-b border-border py-3 last:border-0">
+      <span className="block text-sm font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <span className="mt-0.5 block text-lg font-semibold leading-snug md:text-xl">{value}</span>
     </div>
   );
 }
