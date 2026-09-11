@@ -142,6 +142,13 @@ export function handleMockRequest(path: string, method: string, body: Body | nul
     return { access_token: "mock-token", user: db.user };
   }
 
+  if (is("auth", "change-password") && method === "POST") {
+    if (String(b['newPassword'] ?? "").length < 8)
+      throw new MockHttpError("La nueva contraseña debe tener al menos 8 caracteres", 400);
+    return null;
+  }
+
+
   // --- appointments ---
   if (is("appointments")) {
     if (method === "GET") {
