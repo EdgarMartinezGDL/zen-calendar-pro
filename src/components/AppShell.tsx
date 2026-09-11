@@ -45,7 +45,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     queryFn: () => api<Organization>(`/organizations/${orgId}`),
     enabled: !!orgId,
   });
-  const businessName = org?.name ?? "Mi Negocio";
+  const businessName = org?.headerName?.trim() || org?.name || "Mi Negocio";
+  const headerNameSize = org?.headerNameSize ?? null;
 
   useEffect(() => {
     if (org) applyBranding(org);
