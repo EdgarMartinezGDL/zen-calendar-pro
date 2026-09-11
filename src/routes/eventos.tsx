@@ -296,11 +296,15 @@ function EventModal({
           >
             <input
               type="checkbox"
-              disabled={locked}
+              aria-readonly={locked}
+              tabIndex={locked ? -1 : 0}
               checked={form.isActive}
-              onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+              onChange={(e) => {
+                if (locked) return;
+                setForm({ ...form, isActive: e.target.checked });
+              }}
               className={`h-4 w-4 accent-[var(--color-primary)] ${
-                locked ? "cursor-not-allowed opacity-100" : ""
+                locked ? "pointer-events-none cursor-not-allowed" : ""
               }`}
             />
             Activo
