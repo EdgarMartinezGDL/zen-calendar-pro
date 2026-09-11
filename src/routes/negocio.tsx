@@ -1192,9 +1192,18 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           </select>
         </Field>
         <Field label="URL del logo">
-          <input className={inputCls} value={value.logoUrl ?? ""} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} />
+          <input
+            className={inputCls}
+            placeholder="https://.../mi-logo.png"
+            value={value.logoUrl ?? ""}
+            onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+          />
         </Field>
-        {value.logoUrl && <img src={value.logoUrl} alt="Vista previa del logo" className="h-16 object-contain" />}
+        <p className="-mt-1 text-xs leading-relaxed text-muted-foreground">
+          Pega el enlace directo a tu imagen (.png, .jpg o .webp). Puedes alojarla en servicios como
+          postimages.org o imgbb.com (copiando la opción «Enlace directo»).
+        </p>
+        <LogoPreview url={value.logoUrl ?? ""} />
         <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
       </div>
     </Modal>
