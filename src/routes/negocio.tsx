@@ -108,13 +108,21 @@ function LocationsTab({ orgId }: { orgId: string }) {
     queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
   });
 
-  const [form, setForm] = useState({ name: "", address: "", phone: "", email: "", isActive: true });
+  const [form, setForm] = useState({
+    name: "",
+    address: "",
+    mapsUrl: "",
+    phone: "",
+    email: "",
+    isActive: true,
+  });
 
   const open = (loc: Location | null) => {
     setError(null);
     setForm({
       name: loc?.name ?? "",
       address: loc?.address ?? "",
+      mapsUrl: loc?.mapsUrl ?? "",
       phone: loc?.phone ?? "",
       email: loc?.email ?? "",
       isActive: loc?.isActive ?? true,
@@ -135,6 +143,7 @@ function LocationsTab({ orgId }: { orgId: string }) {
       const body = {
         name: form.name,
         address: form.address || undefined,
+        mapsUrl: form.mapsUrl.trim() || null,
         phone: form.phone || undefined,
         email: form.email || undefined,
         isActive: form.isActive,
