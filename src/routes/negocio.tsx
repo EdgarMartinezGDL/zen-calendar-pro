@@ -1488,7 +1488,7 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
             className={big}
             value={value.headerNameSize ?? "md"}
             onChange={(e) =>
-              setForm({ ...form, headerNameSize: e.target.value as Organization["headerNameSize"] })
+              setForm({ ...form, headerNameSize: e.target.value as "sm" | "md" | "lg" })
             }
           >
             <option value="sm">Pequeño</option>
