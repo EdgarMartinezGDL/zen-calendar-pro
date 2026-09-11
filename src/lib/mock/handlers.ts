@@ -324,7 +324,7 @@ export function handleMockRequest(path: string, method: string, body: Body | nul
         location: null,
         venueName: (b['venueName'] as string | null) ?? null,
         venueAddress: (b['venueAddress'] as string | null) ?? null,
-        mapsLink: null,
+        mapsLink: (b['mapsLink'] as string | null) ?? null,
         requirements: (b['requirements'] as string | null) ?? null,
         notes: null,
         capacity: Number(b['capacity'] ?? 10),
