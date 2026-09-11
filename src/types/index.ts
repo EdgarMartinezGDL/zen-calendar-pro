@@ -146,6 +146,10 @@ export interface Organization {
   secondaryColor: string | null;
   fontFamily: string | null;
   fontScale: "sm" | "md" | "lg";
+  /** Nombre mostrado en la cabecera (si se deja vacío se usa `name`). */
+  headerName?: string | null;
+  /** Tamaño forzado del nombre en la cabecera. */
+  headerNameSize?: "sm" | "md" | "lg" | null;
 }
 
 export interface Report {
