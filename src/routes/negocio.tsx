@@ -1203,12 +1203,13 @@ function SlotsTab({ orgId }: { orgId: string }) {
 /* ---------------- Configuración ---------------- */
 
 function SettingsTab({ orgId }: { orgId: string }) {
-  const [open, setOpen] = useState<null | "ia" | "marca" | "politica">(null);
+  const [open, setOpen] = useState<null | "ia" | "marca" | "politica" | "cuenta">(null);
 
   const cards = [
     { key: "ia" as const, title: "Asistente de IA", desc: "Nombre, tono y mensajes automáticos." },
     { key: "marca" as const, title: "Marca", desc: "Tema, colores, tipografía y logo." },
     { key: "politica" as const, title: "Política de cancelación", desc: "Plazos y penalizaciones." },
+    { key: "cuenta" as const, title: "Mi Cuenta", desc: "Correo de acceso y contraseña." },
   ];
 
   return (
@@ -1227,6 +1228,8 @@ function SettingsTab({ orgId }: { orgId: string }) {
       {open === "ia" && <AIModal orgId={orgId} onClose={() => setOpen(null)} />}
       {open === "marca" && <BrandingModal orgId={orgId} onClose={() => setOpen(null)} />}
       {open === "politica" && <PolicyModal orgId={orgId} onClose={() => setOpen(null)} />}
+      {open === "cuenta" && <AccountModal onClose={() => setOpen(null)} />}
+
     </>
   );
 }
