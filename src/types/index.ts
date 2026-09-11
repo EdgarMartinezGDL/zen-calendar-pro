@@ -36,6 +36,7 @@ export interface Location {
   id: string;
   name: string;
   address: string | null;
+  mapsUrl?: string | null;
   phone: string | null;
   email: string | null;
   timezone: string;
