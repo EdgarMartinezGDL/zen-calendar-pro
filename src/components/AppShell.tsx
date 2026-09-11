@@ -47,6 +47,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   });
   const businessName = org?.headerName?.trim() || org?.name || "Mi Negocio";
   const headerNameSize = org?.headerNameSize ?? null;
+  const mobileLong = businessName.trim().length > 16;
+  const mobileInitials = businessName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
 
   useEffect(() => {
     if (org) applyBranding(org);
@@ -108,20 +115,50 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Cabecera móvil */}
-      <header className="sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-card px-4 py-3 md:hidden">
-        <BusinessBrand name={businessName} logoUrl={org?.logoUrl} nameSize={headerNameSize} />
-        <div className="flex shrink-0 items-center gap-1">
-          <div className="flex scale-90 origin-right">
-            <PlatformSeal compact />
-          </div>
-          <ThemeToggle />
-          <button
-            onClick={logout}
-            aria-label="Salir"
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-card px-3 py-2 md:hidden">
+        {/* Bloque izquierdo: logo + nombre */}
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {org?.logoUrl ? (
+            <img
+              src={org.logoUrl}
+              alt={businessName}
+              className="h-11 w-auto max-w-[3.5rem] shrink-0 object-contain"
+            />
+          ) : (
+            <div
+              aria-hidden
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/15 text-sm font-bold tracking-wide text-gold"
+            >
+              {mobileInitials}
+            </div>
+          )}
+          <p
+            className={`min-w-0 flex-1 font-bold tracking-tight text-foreground ${
+              mobileLong
+                ? "line-clamp-2 break-words text-sm leading-tight"
+                : "truncate text-base leading-tight"
+            }`}
           >
-            <LogOut className="h-4 w-4" />
-          </button>
+            {businessName}
+          </p>
+        </div>
+
+        {/* Bloque derecho: acciones + sello institucional */}
+        <div className="flex shrink-0 flex-col items-end justify-center">
+          <div className="flex items-center">
+            <ThemeToggle />
+            <button
+              onClick={logout}
+              aria-label="Salir"
+              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="pr-1 text-right leading-tight">
+            <p className="text-[10px] font-semibold text-foreground">Mi Agenda Zen</p>
+            <p className="text-[9px] font-medium text-muted-foreground">By MicroFix Cloud</p>
+          </div>
         </div>
       </header>
 
