@@ -35,8 +35,16 @@ function ThemeToggle({ full = false }: { full?: boolean }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [user, setUser] = useState<{ fullName: string } | null>(null);
+  const [user, setUser] = useState<{ fullName: string; organizationId: string } | null>(null);
   const [checked, setChecked] = useState(false);
+
+  const orgId = user?.organizationId;
+  const { data: org } = useQuery({
+    queryKey: ["organization", orgId],
+    queryFn: () => api<Organization>(`/organizations/${orgId}`),
+    enabled: !!orgId,
+  });
+  const businessName = org?.name ?? "Mi Negocio";
 
   useEffect(() => {
     const current = auth.getUser();
