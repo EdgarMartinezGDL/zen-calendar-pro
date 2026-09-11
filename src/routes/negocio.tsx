@@ -1257,19 +1257,54 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
     onError: (e: Error) => setError(e.message),
   });
 
+  const tone = value.tone ?? TONES[0]!;
+  const isPreset = TONES.includes(tone);
+  const [customTone, setCustomTone] = useState(!isPreset && !!tone);
+  const big = `${inputCls} h-12 text-lg`;
+
   return (
     <Modal open onClose={onClose} title="Asistente de IA">
       {error && <Banner kind="error" message={error} />}
-      <div className="space-y-3">
+      <div className="space-y-5 text-lg">
         <Check label="Activo" checked={!!value.enabled} onChange={(v) => setForm({ ...form, enabled: v })} />
         <Field label="Nombre del asistente">
-          <input className={inputCls} value={value.assistantName ?? ""} onChange={(e) => setForm({ ...form, assistantName: e.target.value })} />
+          <input className={big} value={value.assistantName ?? ""} onChange={(e) => setForm({ ...form, assistantName: e.target.value })} />
         </Field>
         <Field label="Tono">
-          <input className={inputCls} value={value.tone ?? ""} onChange={(e) => setForm({ ...form, tone: e.target.value })} />
+          <select
+            className={big}
+            value={customTone ? "__custom__" : isPreset ? tone : TONES[0]}
+            onChange={(e) => {
+              if (e.target.value === "__custom__") {
+                setCustomTone(true);
+                setForm({ ...form, tone: "" });
+              } else {
+                setCustomTone(false);
+                setForm({ ...form, tone: e.target.value });
+              }
+            }}
+          >
+            {TONES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+            <option value="__custom__">Personalizado…</option>
+          </select>
         </Field>
+        {customTone && (
+          <Field label="Tono personalizado">
+            <textarea
+              rows={2}
+              className={`${inputCls} text-lg`}
+              placeholder="Describe con tus palabras el tono que deseas…"
+              value={value.tone ?? ""}
+              onChange={(e) => setForm({ ...form, tone: e.target.value })}
+            />
+          </Field>
+        )}
         <Field label="Mensaje de bienvenida">
-          <textarea rows={2} className={inputCls} value={value.welcomeMessage ?? ""} onChange={(e) => setForm({ ...form, welcomeMessage: e.target.value })} />
+          <textarea rows={3} className={`${inputCls} text-lg`} value={value.welcomeMessage ?? ""} onChange={(e) => setForm({ ...form, welcomeMessage: e.target.value })} />
         </Field>
         <Check
           label="Enviar en el primer mensaje"
@@ -1277,15 +1312,28 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
           onChange={(v) => setForm({ ...form, sendWelcomeOnFirstMessage: v })}
         />
         <Field label="Mensaje de respaldo">
-          <textarea rows={2} className={inputCls} value={value.fallbackMessage ?? ""} onChange={(e) => setForm({ ...form, fallbackMessage: e.target.value })} />
+          <textarea rows={3} className={`${inputCls} text-lg`} value={value.fallbackMessage ?? ""} onChange={(e) => setForm({ ...form, fallbackMessage: e.target.value })} />
         </Field>
         <Check label="Formato WhatsApp" checked={!!value.formatWhatsappText} onChange={(v) => setForm({ ...form, formatWhatsappText: v })} />
-        <Check label="Permitir takeover humano" checked={!!value.allowHumanTakeover} onChange={(v) => setForm({ ...form, allowHumanTakeover: v })} />
-        <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
+        <Check label="Permitir que un humano tome el control" checked={!!value.allowHumanTakeover} onChange={(v) => setForm({ ...form, allowHumanTakeover: v })} />
+        <button
+          onClick={() => save.mutate()}
+          disabled={save.isPending}
+          className="w-full rounded-md bg-primary px-4 py-3 text-lg font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          Guardar
+        </button>
       </div>
     </Modal>
   );
 }
+
+const TONES = [
+  "Cálido y profesional",
+  "Empático y cercano",
+  "Formal y clínico",
+  "Directo y conciso",
+];
 
 const FONTS = ["Inter", "Plus Jakarta Sans", "Roboto", "Lato", "Merriweather"];
 
