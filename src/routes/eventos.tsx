@@ -141,6 +141,7 @@ function EventModal({
     capacity: String(event?.capacity ?? 10),
     venueName: event?.venueName ?? "",
     venueAddress: event?.venueAddress ?? "",
+    mapsLink: event?.mapsLink ?? "",
     requirements: event?.requirements ?? "",
     isActive: event?.isActive ?? true,
   });
