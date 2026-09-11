@@ -161,6 +161,7 @@ function EventModal({
         capacity: Number(form.capacity),
         venueName: form.venueName || undefined,
         venueAddress: form.venueAddress || undefined,
+        mapsLink: form.mapsLink.trim() || undefined,
         requirements: form.requirements || undefined,
         isActive: form.isActive,
       };
