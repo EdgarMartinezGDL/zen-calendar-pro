@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
+import { Confirm } from "@/components/Confirm";
 import { Modal } from "@/components/Modal";
 import { Field, inputCls } from "@/routes/index";
 import { api, auth } from "@/lib/api";
