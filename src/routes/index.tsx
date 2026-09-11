@@ -374,7 +374,7 @@ function NewAppointmentModal({
     <Modal open={open} onClose={onClose} title="Nueva cita">
       {error && <Banner kind="error" message={error} />}
       <div className="space-y-3">
-        <Field label="Cliente">
+        <Field label="Cliente *">
           <input
             className={inputCls}
             value={form.clientName}
