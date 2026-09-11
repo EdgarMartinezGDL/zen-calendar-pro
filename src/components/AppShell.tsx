@@ -48,6 +48,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const businessName = org?.headerName?.trim() || org?.name || "Mi Negocio";
   const headerNameSize = org?.headerNameSize ?? null;
   const mobileLong = businessName.trim().length > 16;
+  const mobileNameCls =
+    headerNameSize === "sm"
+      ? "text-sm"
+      : headerNameSize === "lg"
+        ? "text-xl"
+        : headerNameSize === "md"
+          ? "text-base"
+          : mobileLong
+            ? "text-sm"
+            : "text-base";
   const mobileInitials = businessName
     .split(/\s+/)
     .filter(Boolean)
