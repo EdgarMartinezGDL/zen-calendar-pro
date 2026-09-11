@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Copy, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
@@ -1124,6 +1124,37 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
 
 const FONTS = ["Inter", "Plus Jakarta Sans", "Roboto", "Lato", "Merriweather"];
 
+function LogoPreview({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = url.trim();
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src) return null;
+
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex h-[70px] w-[70px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/40">
+        {!failed && (
+          <img
+            src={src}
+            alt="Vista previa del logo"
+            className="h-full w-full object-contain"
+            onError={() => setFailed(true)}
+          />
+        )}
+      </div>
+      {failed && (
+        <p className="pt-1 text-xs leading-relaxed text-muted-foreground">
+          No se pudo cargar la imagen. Verifica que sea un enlace directo (.png, .jpg o .webp).
+        </p>
+      )}
+    </div>
+  );
+}
+
 function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const { data } = useQuery({
@@ -1192,9 +1223,18 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           </select>
         </Field>
         <Field label="URL del logo">
-          <input className={inputCls} value={value.logoUrl ?? ""} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} />
+          <input
+            className={inputCls}
+            placeholder="https://.../mi-logo.png"
+            value={value.logoUrl ?? ""}
+            onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+          />
         </Field>
-        {value.logoUrl && <img src={value.logoUrl} alt="Vista previa del logo" className="h-16 object-contain" />}
+        <p className="-mt-1 text-xs leading-relaxed text-muted-foreground">
+          Pega el enlace directo a tu imagen (.png, .jpg o .webp). Puedes alojarla en servicios como
+          postimages.org o imgbb.com (copiando la opción «Enlace directo»).
+        </p>
+        <LogoPreview url={value.logoUrl ?? ""} />
         <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
       </div>
     </Modal>

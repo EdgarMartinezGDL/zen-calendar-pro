@@ -1,10 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { BarChart3, CalendarDays, LogOut, Moon, Store, Sun, Sparkles } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { Brand } from "@/components/Brand";
-import { auth } from "@/lib/api";
+import { BusinessBrand, PlatformSeal } from "@/components/Brand";
+import { api, auth } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
+import type { Organization } from "@/types";
 
 const NAV = [
   { to: "/", label: "Hoy", icon: CalendarDays },
@@ -33,8 +35,16 @@ function ThemeToggle({ full = false }: { full?: boolean }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [user, setUser] = useState<{ fullName: string } | null>(null);
+  const [user, setUser] = useState<{ fullName: string; organizationId: string } | null>(null);
   const [checked, setChecked] = useState(false);
+
+  const orgId = user?.organizationId;
+  const { data: org } = useQuery({
+    queryKey: ["organization", orgId],
+    queryFn: () => api<Organization>(`/organizations/${orgId}`),
+    enabled: !!orgId,
+  });
+  const businessName = org?.name ?? "Mi Negocio";
 
   useEffect(() => {
     const current = auth.getUser();
@@ -60,7 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Sidebar escritorio */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar p-4 md:flex">
         <div className="px-2 py-3">
-          <Brand />
+          <BusinessBrand name={businessName} logoUrl={org?.logoUrl} />
         </div>
         <nav className="mt-6 flex flex-1 flex-col gap-1">
           {NAV.map(({ to, label, icon: Icon }) => (
@@ -76,6 +86,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="border-t border-sidebar-border pt-3">
+          <div className="px-3 pb-3">
+            <PlatformSeal />
+          </div>
           <p className="truncate px-3 pb-2 text-xs text-muted-foreground">{user?.fullName}</p>
           <ThemeToggle full />
           <button
@@ -90,8 +103,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Cabecera móvil */}
       <header className="sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-card px-4 py-3 md:hidden">
-        <Brand size="sm" />
+        <BusinessBrand name={businessName} logoUrl={org?.logoUrl} />
         <div className="flex shrink-0 items-center gap-1">
+          <div className="hidden sm:flex">
+            <PlatformSeal compact />
+          </div>
           <ThemeToggle />
           <button
             onClick={logout}
