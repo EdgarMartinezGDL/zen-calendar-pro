@@ -396,7 +396,7 @@ function NewAppointmentModal({
             onChange={(e) => setForm({ ...form, age: e.target.value })}
           />
         </Field>
-        <Field label="Ubicación">
+        <Field label="Ubicación *">
           <select
             className={inputCls}
             value={form.locationId}
