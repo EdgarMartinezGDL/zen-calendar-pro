@@ -1124,6 +1124,37 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
 
 const FONTS = ["Inter", "Plus Jakarta Sans", "Roboto", "Lato", "Merriweather"];
 
+function LogoPreview({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = url.trim();
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src) return null;
+
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex h-[70px] w-[70px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/40">
+        {!failed && (
+          <img
+            src={src}
+            alt="Vista previa del logo"
+            className="h-full w-full object-contain"
+            onError={() => setFailed(true)}
+          />
+        )}
+      </div>
+      {failed && (
+        <p className="pt-1 text-xs leading-relaxed text-muted-foreground">
+          No se pudo cargar la imagen. Verifica que sea un enlace directo (.png, .jpg o .webp).
+        </p>
+      )}
+    </div>
+  );
+}
+
 function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const { data } = useQuery({
