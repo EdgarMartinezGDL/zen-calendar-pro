@@ -410,7 +410,7 @@ function NewAppointmentModal({
             ))}
           </select>
         </Field>
-        <Field label="Servicio">
+        <Field label="Servicio (opcional)">
           <select
             className={inputCls}
             value={form.serviceId}
