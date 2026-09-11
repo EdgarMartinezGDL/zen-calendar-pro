@@ -1,21 +1,26 @@
 import { X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 
+const SIZE_CLS: Record<"md" | "lg" | "xl", string> = {
+  md: "sm:max-w-lg",
+  lg: "sm:max-w-2xl",
+  xl: "sm:max-w-3xl",
+};
+
 export function Modal({
   open,
   onClose,
   title,
   children,
-  centered = false,
   size = "md",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
-  /** Centra el diálogo también en móvil (en vez de hoja inferior). */
+  /** Se mantiene por compatibilidad: todos los diálogos ya son centrados. */
   centered?: boolean;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl";
 }) {
   useEffect(() => {
     if (!open) return;
@@ -27,27 +32,21 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div
-      className={`fixed inset-0 z-50 flex justify-center bg-foreground/50 backdrop-blur-sm md:items-center ${
-        centered ? "items-center p-4" : "items-end"
-      }`}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50 p-3 backdrop-blur-sm sm:p-6">
       <div className="absolute inset-0" onClick={onClose} aria-hidden />
       <div
-        className={`card-zen relative z-10 max-h-[88vh] w-full overflow-y-auto ${
-          centered
-            ? "rounded-[var(--radius-lg)] p-7"
-            : "rounded-b-none p-5 md:rounded-b-[var(--radius-lg)]"
-        } ${size === "lg" ? "md:max-w-xl" : "md:max-w-lg"}`}
+        className={`card-zen relative z-10 max-h-[90vh] w-full overflow-y-auto rounded-[var(--radius-lg)] p-6 sm:p-8 ${SIZE_CLS[size]}`}
       >
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 className={`${size === "lg" ? "text-2xl" : "text-lg"} font-bold`}>{title}</h2>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <h2 className={`${size === "md" ? "text-xl" : "text-2xl"} font-bold leading-tight`}>
+            {title}
+          </h2>
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </button>
         </div>
         {children}
