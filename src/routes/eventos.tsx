@@ -130,6 +130,9 @@ function EventModal({
 }) {
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const [locked, setLocked] = useState(!!event);
+  const [askUnlock, setAskUnlock] = useState(false);
+  const [askDelete, setAskDelete] = useState(false);
   const [form, setForm] = useState({
     name: event?.name ?? "",
     description: event?.description ?? "",
