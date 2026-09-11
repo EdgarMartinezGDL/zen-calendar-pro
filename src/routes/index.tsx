@@ -227,7 +227,7 @@ function DetailModal({
       {error && <Banner kind="error" message={error} />}
 
       {view === "detail" && (
-        <div className="space-y-2 text-sm">
+        <div className="space-y-1">
           <Row label="Cliente" value={appointment.clientName} />
           <Row label="Teléfono" value={appointment.clientPhone} />
           <Row label="Edad" value={appointment.age ? String(appointment.age) : "—"} />
