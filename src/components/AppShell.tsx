@@ -105,7 +105,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-card px-4 py-3 md:hidden">
         <BusinessBrand name={businessName} logoUrl={org?.logoUrl} />
         <div className="flex shrink-0 items-center gap-1">
-          <div className="hidden xs:flex sm:flex">
+          <div className="hidden sm:flex">
             <PlatformSeal compact />
           </div>
           <ThemeToggle />
