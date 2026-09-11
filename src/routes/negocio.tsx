@@ -677,10 +677,10 @@ function HoursTab({ orgId }: { orgId: string }) {
 
   const renderGroup = ([date, list]: [string, BusinessHour[]]) => (
     <div key={date}>
-      <h2 className="mb-2 flex items-center gap-2 text-sm font-bold text-muted-foreground">
+      <h2 className="mb-2 flex items-center gap-2 text-base font-bold text-muted-foreground">
         {formatDateLabel(date)}
         {date === today && (
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
             Hoy
           </span>
         )}
@@ -689,19 +689,19 @@ function HoursTab({ orgId }: { orgId: string }) {
         {list.map((h) => (
           <li key={h.id} className="card-zen flex items-center gap-2 p-4">
             <button onClick={() => open(h)} className="flex-1 text-left">
-              <p className="font-semibold">
+              <p className="text-lg font-semibold">
                 {h.startTime} – {h.endTime}
                 {!h.isActive && (
-                  <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                  <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                     Inactivo
                   </span>
                 )}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Citas de {h.appointmentDuration} min · Descanso {h.breakDuration} min · Cupo{" "}
                 {h.capacity ?? 1}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {locations?.find((l) => l.id === h.locationId)?.name ?? "Todas las ubicaciones"}
               </p>
             </button>
@@ -869,10 +869,28 @@ function HoursTab({ orgId }: { orgId: string }) {
 
 /* ---------------- Cupo ---------------- */
 
+type GridSlot = {
+  key: string;
+  date: string;
+  startAt: Date;
+  endAt: Date;
+  capacity: number;
+  bookedCount: number;
+  isActive: boolean;
+  locationId: string | null;
+  slot: AppointmentSlot | null;
+};
+
+const fmtTime = (d: Date) =>
+  d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+const ymdOf = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
 function SlotsTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
   const [locationId, setLocationId] = useState("");
-  const [editing, setEditing] = useState<AppointmentSlot | null>(null);
+  const [editing, setEditing] = useState<GridSlot | null>(null);
   const [creating, setCreating] = useState(false);
   const [capacity, setCapacity] = useState("1");
   const [isActive, setIsActive] = useState(true);
@@ -898,6 +916,55 @@ function SlotsTab({ orgId }: { orgId: string }) {
       ),
   });
 
+  const { data: hours } = useQuery({
+    queryKey: ["business-hours", orgId],
+    queryFn: () => api<BusinessHour[]>(`/business-hours?organizationId=${orgId}`),
+  });
+
+  /** Partición matemática: intervalo = duración de cita + descanso. */
+  const groups = useMemo(() => {
+    const today = todayYmd();
+    const limit = ymdOf(new Date(Date.now() + 14 * 86400000));
+    const existing = new Map<number, AppointmentSlot>();
+    for (const s of data ?? []) existing.set(new Date(s.startAt).getTime(), s);
+
+    const map = new Map<string, GridSlot[]>();
+    for (const h of hours ?? []) {
+      if (!h?.date || h.date < today || h.date > limit) continue;
+      if (locationId && h.locationId && h.locationId !== locationId) continue;
+      const step = Number(h.appointmentDuration || 0) + Number(h.breakDuration || 0);
+      if (step <= 0) continue;
+      const startMin = toMin(h.startTime);
+      const endMin = toMin(h.endTime);
+      for (let m = startMin; m + Number(h.appointmentDuration) <= endMin; m += step) {
+        const startAt = new Date(`${h.date}T00:00:00`);
+        startAt.setMinutes(m);
+        const endAt = new Date(startAt.getTime() + Number(h.appointmentDuration) * 60000);
+        const found = existing.get(startAt.getTime());
+        const item: GridSlot = {
+          key: `${h.id}-${m}`,
+          date: h.date,
+          startAt,
+          endAt,
+          capacity: found?.capacity ?? h.capacity ?? 1,
+          bookedCount: found?.bookedCount ?? 0,
+          isActive: found ? found.isActive : h.isActive,
+          locationId: h.locationId,
+          slot: found ?? null,
+        };
+        const list = map.get(h.date) ?? [];
+        list.push(item);
+        map.set(h.date, list);
+      }
+    }
+    return [...map.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(
+        ([date, list]) =>
+          [date, list.sort((a, b) => a.startAt.getTime() - b.startAt.getTime())] as const,
+      );
+  }, [data, hours, locationId]);
+
   const refresh = () => qc.invalidateQueries({ queryKey: ["slots"] });
   const close = () => {
     setEditing(null);
@@ -906,20 +973,23 @@ function SlotsTab({ orgId }: { orgId: string }) {
 
   const save = useMutation({
     mutationFn: () => {
-      if (editing) {
-        return api(`/appointment-slots/${editing.id}`, {
+      if (editing?.slot) {
+        return api(`/appointment-slots/${editing.slot.id}`, {
           method: "PATCH",
           body: { capacity: Number(capacity), isActive },
         });
       }
-      const start = new Date(`${newSlot.date}T${newSlot.time}`);
+      const start = editing ? editing.startAt : new Date(`${newSlot.date}T${newSlot.time}`);
+      const end = editing
+        ? editing.endAt
+        : new Date(start.getTime() + Number(newSlot.duration) * 60000);
       return api("/appointment-slots", {
         method: "POST",
         body: {
           organizationId: orgId,
-          locationId: locationId || null,
+          locationId: editing?.locationId ?? (locationId || null),
           startAt: start.toISOString(),
-          endAt: new Date(start.getTime() + Number(newSlot.duration) * 60000).toISOString(),
+          endAt: end.toISOString(),
           capacity: Number(capacity),
           isActive,
         },
@@ -932,7 +1002,7 @@ function SlotsTab({ orgId }: { orgId: string }) {
   });
 
   const remove = useMutation({
-    mutationFn: () => api(`/appointment-slots/${editing!.id}`, { method: "DELETE" }),
+    mutationFn: () => api(`/appointment-slots/${editing!.slot!.id}`, { method: "DELETE" }),
     onSuccess: () => {
       refresh();
       close();
@@ -952,37 +1022,63 @@ function SlotsTab({ orgId }: { orgId: string }) {
         </select>
       )}
 
-      <CardList>
-        {(data ?? []).map((s) => (
-          <li key={s.id}>
-            <button
-              onClick={() => {
-                setEditing(s);
-                setCapacity(String(s.capacity));
-                setIsActive(s.isActive);
-              }}
-              className="card-zen flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-accent/40"
-            >
-              <span className="min-w-0">
-                <span className="block font-semibold">
-                  {new Date(s.startAt).toLocaleString("es-MX", {
-                    day: "numeric",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+      <div className="space-y-4">
+        {groups.map(([date, list]) => (
+          <section key={date} className="rounded-xl border border-border bg-card/60 p-3">
+            <h2 className="mb-3 border-b border-border pb-2 text-base font-bold">
+              {formatDateLabel(date)}
+              {date === todayYmd() && (
+                <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                  Hoy
                 </span>
-                {!s.isActive && (
-                  <span className="text-xs font-semibold text-status-cancelled">Bloqueado</span>
-                )}
-              </span>
-              <span className="shrink-0 rounded-full bg-status-confirmed-bg px-2.5 py-1 text-[11px] font-semibold text-status-confirmed">
-                {s.bookedCount}/{s.capacity}
-              </span>
-            </button>
-          </li>
+              )}
+            </h2>
+            <ul className="space-y-2">
+              {list.map((s) => {
+                const full = s.bookedCount >= s.capacity;
+                return (
+                  <li key={s.key}>
+                    <button
+                      onClick={() => {
+                        setEditing(s);
+                        setCapacity(String(s.capacity));
+                        setIsActive(s.isActive);
+                      }}
+                      className="card-zen flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-accent/40"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-base font-semibold">
+                          {fmtTime(s.startAt)} – {fmtTime(s.endAt)}
+                        </span>
+                        {!s.isActive && (
+                          <span className="text-sm font-semibold text-status-cancelled">
+                            Bloqueado
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${
+                          full
+                            ? "bg-status-pending-bg text-status-pending"
+                            : "bg-status-confirmed-bg text-status-confirmed"
+                        }`}
+                      >
+                        {s.bookedCount}/{s.capacity}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         ))}
-      </CardList>
+        {!groups.length && (
+          <p className="text-sm text-muted-foreground">
+            No hay cupos: primero carga bloques en la pestaña Horarios.
+          </p>
+        )}
+      </div>
+
       <DashedButton
         label="Nuevo horario manual"
         onClick={() => {
@@ -995,6 +1091,12 @@ function SlotsTab({ orgId }: { orgId: string }) {
       {(editing || creating) && (
         <Modal open onClose={close} title={editing ? "Editar cupo" : "Nuevo horario manual"}>
           <div className="space-y-3">
+            {editing && (
+              <p className="rounded-md bg-muted/60 p-3 text-sm font-semibold">
+                {formatDateLabel(editing.date)} · {fmtTime(editing.startAt)} –{" "}
+                {fmtTime(editing.endAt)}
+              </p>
+            )}
             {creating && (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -1010,15 +1112,15 @@ function SlotsTab({ orgId }: { orgId: string }) {
                 </Field>
               </>
             )}
-            <Field label="Cupo">
-              <input type="number" className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+            <Field label="Cupo (1 por defecto, súbelo solo para sobrecupos)">
+              <input type="number" min={1} className={inputCls} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
             </Field>
             <label className="flex items-center gap-2 text-sm font-medium">
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
               Disponible para agendar
             </label>
             <SaveButton onClick={() => save.mutate()} pending={save.isPending} />
-            {editing && editing.bookedCount === 0 && (
+            {editing?.slot && editing.bookedCount === 0 && (
               <button
                 onClick={() => remove.mutate()}
                 className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold text-destructive"
