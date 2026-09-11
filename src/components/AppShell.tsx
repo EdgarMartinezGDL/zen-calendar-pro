@@ -86,6 +86,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="border-t border-sidebar-border pt-3">
+          <div className="px-3 pb-3">
+            <PlatformSeal />
+          </div>
           <p className="truncate px-3 pb-2 text-xs text-muted-foreground">{user?.fullName}</p>
           <ThemeToggle full />
           <button
