@@ -677,10 +677,10 @@ function HoursTab({ orgId }: { orgId: string }) {
 
   const renderGroup = ([date, list]: [string, BusinessHour[]]) => (
     <div key={date}>
-      <h2 className="mb-2 flex items-center gap-2 text-sm font-bold text-muted-foreground">
+      <h2 className="mb-2 flex items-center gap-2 text-base font-bold text-muted-foreground">
         {formatDateLabel(date)}
         {date === today && (
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
             Hoy
           </span>
         )}
@@ -689,19 +689,19 @@ function HoursTab({ orgId }: { orgId: string }) {
         {list.map((h) => (
           <li key={h.id} className="card-zen flex items-center gap-2 p-4">
             <button onClick={() => open(h)} className="flex-1 text-left">
-              <p className="font-semibold">
+              <p className="text-lg font-semibold">
                 {h.startTime} – {h.endTime}
                 {!h.isActive && (
-                  <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                  <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                     Inactivo
                   </span>
                 )}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Citas de {h.appointmentDuration} min · Descanso {h.breakDuration} min · Cupo{" "}
                 {h.capacity ?? 1}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {locations?.find((l) => l.id === h.locationId)?.name ?? "Todas las ubicaciones"}
               </p>
             </button>
