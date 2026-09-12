@@ -81,7 +81,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     setChecked(true);
   }, [navigate]);
 
-  const logout = () => {
+  const logout = () => setLogoutOpen(true);
+
+  const confirmLogout = () => {
+    setLogoutOpen(false);
     auth.clear();
     navigate({ to: "/login" });
   };
