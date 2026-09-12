@@ -39,6 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [user, setUser] = useState<{ fullName: string; organizationId: string } | null>(null);
   const [checked, setChecked] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const orgId = user?.organizationId;
   const { data: org } = useQuery({
