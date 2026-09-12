@@ -40,7 +40,7 @@ export function Confirm({
       <div className={`${large ? "mt-8 gap-4" : "mt-5 gap-2"} flex flex-col sm:flex-row`}>
         <button
           onClick={onCancel}
-          className={`flex-1 rounded-md border border-border font-semibold transition-colors hover:bg-accent ${
+          className={`btn-3d btn-3d-muted flex-1 ${
             large ? "px-5 py-3.5 text-lg" : "px-3 py-2 text-sm"
           }`}
         >
