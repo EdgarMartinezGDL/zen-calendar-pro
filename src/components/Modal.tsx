@@ -32,10 +32,10 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50 p-3 backdrop-blur-sm sm:p-6">
+    <div className="fixed inset-0 z-50 flex max-w-[100vw] items-center justify-center overflow-x-hidden overscroll-x-none bg-foreground/50 p-3 backdrop-blur-sm sm:p-6">
       <div className="absolute inset-0" onClick={onClose} aria-hidden />
       <div
-        className={`card-zen relative z-10 max-h-[90vh] w-full overflow-y-auto rounded-[var(--radius-lg)] p-6 sm:p-8 ${SIZE_CLS[size]}`}
+        className={`card-zen relative z-10 box-border max-h-[90vh] w-full max-w-[100vw] touch-pan-y overflow-x-hidden overflow-y-auto overscroll-x-none break-words rounded-[var(--radius-lg)] p-6 sm:p-8 ${SIZE_CLS[size]}`}
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <h2 className={`${size === "md" ? "text-xl" : "text-2xl"} font-bold leading-tight`}>
