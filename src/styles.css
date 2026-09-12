@@ -31,6 +31,10 @@
   --color-gold-soft: var(--gold-soft);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -69,6 +73,10 @@
   --gold-soft: oklch(0.71 0.125 82);
   --destructive: oklch(0.637 0.208 25.3);
   --destructive-foreground: oklch(0.984 0.003 247.9);
+  --warning: oklch(0.68 0.168 55);
+  --warning-foreground: oklch(0.208 0.04 265.8);
+  --info: oklch(0.58 0.15 250);
+  --info-foreground: oklch(0.984 0.003 247.9);
   --border: oklch(0.929 0.013 255.5);
   --input: oklch(0.929 0.013 255.5);
   --ring: oklch(0.511 0.086 186.4);
@@ -104,6 +112,10 @@
   --gold: oklch(0.837 0.164 84.4);
   --gold-soft: oklch(0.71 0.125 82);
   --destructive: oklch(0.711 0.166 22.2);
+  --warning: oklch(0.8 0.15 62);
+  --warning-foreground: oklch(0.208 0.04 265.8);
+  --info: oklch(0.72 0.13 248);
+  --info-foreground: oklch(0.208 0.04 265.8);
   --destructive-foreground: oklch(0.208 0.04 265.8);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
@@ -232,3 +244,68 @@
   }
 }
 
+
+/* Botón de acción con relieve 3D (variantes de color vía --btn-3d-color). */
+@utility btn-3d {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--btn-3d-color, var(--color-primary)) 82%, white),
+    var(--btn-3d-color, var(--color-primary)) 55%,
+    color-mix(in oklab, var(--btn-3d-color, var(--color-primary)) 82%, black)
+  );
+  font-weight: 700;
+  border: 1px solid color-mix(in oklab, white 25%, transparent);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 10px 20px -8px color-mix(in oklab, var(--btn-3d-color, var(--color-primary)) 60%, transparent),
+    inset 0 1px 0 color-mix(in oklab, white 45%, transparent),
+    inset 0 -2px 6px oklch(0 0 0 / 0.25);
+  transition:
+    filter 0.15s ease,
+    transform 0.1s ease;
+
+  &:hover {
+    filter: brightness(1.12) saturate(1.08);
+  }
+
+  &:active {
+    filter: brightness(0.92);
+    transform: translateY(1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    filter: none;
+    transform: none;
+  }
+}
+
+@utility btn-3d-primary {
+  --btn-3d-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+@utility btn-3d-warning {
+  --btn-3d-color: var(--color-warning);
+  color: var(--color-warning-foreground);
+}
+
+@utility btn-3d-info {
+  --btn-3d-color: var(--color-info);
+  color: var(--color-info-foreground);
+}
+
+@utility btn-3d-danger {
+  --btn-3d-color: var(--color-destructive);
+  color: var(--color-destructive-foreground);
+}
+
+@utility btn-3d-muted {
+  --btn-3d-color: var(--color-secondary);
+  color: var(--color-secondary-foreground);
+}

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
+import { Confirm } from "@/components/Confirm";
 import { Modal } from "@/components/Modal";
 import { api, auth } from "@/lib/api";
 import type { Appointment, AppointmentStatus, OrganizationContext } from "@/types";
@@ -185,12 +186,21 @@ function DetailModal({
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<"attended" | "noshow" | "reschedule" | null>(null);
 
   const close = () => {
     setView("detail");
+    setConfirm(null);
     setError(null);
     onClose();
   };
+
+  const statusM = useMutation({
+    mutationFn: (status: AppointmentStatus) =>
+      api(`/appointments/${appointment!.id}`, { method: "PATCH", body: { status } }),
+    onSuccess: onDone,
+    onError: (e: Error) => setError(e.message),
+  });
 
   const cancelM = useMutation({
     mutationFn: () =>
@@ -220,9 +230,9 @@ function DetailModal({
   });
 
   if (!appointment) return null;
-  const editable = appointment.status === "PENDING" || appointment.status === "CONFIRMED";
 
   return (
+    <>
     <Modal open onClose={close} title="Detalle de la cita" size="lg">
       {error && <Banner kind="error" message={error} />}
 
@@ -238,22 +248,32 @@ function DetailModal({
             value={`${fmtDate(new Date(appointment.startAt))} · ${fmtTime(appointment.startAt)}`}
           />
           <Row label="Notas" value={appointment.notes ?? "—"} />
-          {editable && (
-            <div className="flex gap-3 pt-5">
-              <button
-                onClick={() => setView("reschedule")}
-                className="flex-1 btn-primary px-4 py-3 text-base font-semibold text-primary-foreground"
-              >
-                Reagendar
-              </button>
-              <button
-                onClick={() => setView("cancel")}
-                className="flex-1 rounded-lg border border-border px-4 py-3 text-base font-semibold text-destructive"
-              >
-                Cancelar cita
-              </button>
-            </div>
-          )}
+          <div className="grid grid-cols-1 gap-3 pt-5 sm:grid-cols-2">
+            <button
+              onClick={() => setConfirm("attended")}
+              className="btn-3d btn-3d-primary px-4 py-3.5 text-base"
+            >
+              Paciente Asistió
+            </button>
+            <button
+              onClick={() => setConfirm("noshow")}
+              className="btn-3d btn-3d-warning px-4 py-3.5 text-base"
+            >
+              No Asistió
+            </button>
+            <button
+              onClick={() => setConfirm("reschedule")}
+              className="btn-3d btn-3d-info px-4 py-3.5 text-base"
+            >
+              Reagendar
+            </button>
+            <button
+              onClick={() => setView("cancel")}
+              className="btn-3d btn-3d-danger px-4 py-3.5 text-base"
+            >
+              Cancelar Cita
+            </button>
+          </div>
         </div>
       )}
 
@@ -288,13 +308,55 @@ function DetailModal({
           <button
             disabled={cancelM.isPending}
             onClick={() => cancelM.mutate()}
-            className="w-full rounded-md bg-destructive px-5 py-3.5 text-lg font-bold text-destructive-foreground transition-[filter] hover:brightness-110 disabled:opacity-60"
+            className="btn-3d btn-3d-danger w-full px-5 py-3.5 text-lg"
           >
             Confirmar cancelación
           </button>
         </div>
       )}
     </Modal>
+
+    <Confirm
+      open={confirm === "attended"}
+      large
+      tone="primary"
+      title="Confirmar asistencia"
+      message="¿Confirmar asistencia? El valor de esta cita se registrará en tus ingresos."
+      confirmLabel="Confirmar Asistencia"
+      pending={statusM.isPending}
+      onCancel={() => setConfirm(null)}
+      onConfirm={() => {
+        setConfirm(null);
+        statusM.mutate("COMPLETED");
+      }}
+    />
+    <Confirm
+      open={confirm === "noshow"}
+      large
+      title="Marcar inasistencia"
+      message="¿Marcar como inasistencia? Esta cita no generará ingresos."
+      confirmLabel="Confirmar Inasistencia"
+      pending={statusM.isPending}
+      onCancel={() => setConfirm(null)}
+      onConfirm={() => {
+        setConfirm(null);
+        statusM.mutate("CANCELLED");
+      }}
+    />
+    <Confirm
+      open={confirm === "reschedule"}
+      large
+      tone="primary"
+      title="Reagendar cita"
+      message="¿Deseas reagendar esta cita? Se marcará en tu historial de reportes y podrás seleccionar una nueva fecha."
+      confirmLabel="Reagendar Cita"
+      onCancel={() => setConfirm(null)}
+      onConfirm={() => {
+        setConfirm(null);
+        setView("reschedule");
+      }}
+    />
+    </>
   );
 }
 

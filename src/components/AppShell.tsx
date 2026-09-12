@@ -4,6 +4,7 @@ import { BarChart3, CalendarDays, LogOut, Moon, Store, Sun, Users } from "lucide
 import { useEffect, useState, type ReactNode } from "react";
 
 import { BusinessBrand, PlatformSeal } from "@/components/Brand";
+import { Confirm } from "@/components/Confirm";
 import { api, auth } from "@/lib/api";
 import { applyBranding } from "@/lib/branding";
 import { useTheme } from "@/lib/theme";
@@ -38,6 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [user, setUser] = useState<{ fullName: string; organizationId: string } | null>(null);
   const [checked, setChecked] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const orgId = user?.organizationId;
   const { data: org } = useQuery({
@@ -79,7 +81,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     setChecked(true);
   }, [navigate]);
 
-  const logout = () => {
+  const logout = () => setLogoutOpen(true);
+
+  const confirmLogout = () => {
+    setLogoutOpen(false);
     auth.clear();
     navigate({ to: "/login" });
   };
@@ -190,6 +195,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           );
         })}
       </nav>
+
+      <Confirm
+        open={logoutOpen}
+        large
+        title="Cerrar sesión"
+        message="¿Estás seguro de que deseas cerrar sesión?"
+        confirmLabel="Sí, salir"
+        cancelLabel="Cancelar"
+        onConfirm={confirmLogout}
+        onCancel={() => setLogoutOpen(false)}
+      />
     </div>
   );
 }
