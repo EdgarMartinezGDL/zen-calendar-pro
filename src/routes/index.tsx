@@ -232,6 +232,7 @@ function DetailModal({
   const editable = appointment.status === "PENDING" || appointment.status === "CONFIRMED";
 
   return (
+    <>
     <Modal open onClose={close} title="Detalle de la cita" size="lg">
       {error && <Banner kind="error" message={error} />}
 
