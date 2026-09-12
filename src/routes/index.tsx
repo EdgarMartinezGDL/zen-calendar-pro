@@ -260,9 +260,16 @@ function DetailModal({
     });
   }, [date, time, appointment, dayAppts.data, duration]);
 
-  const price = appointment?.service?.serviceLocations?.find(
-    (sl) => sl.locationId === appointment?.locationId,
-  )?.price;
+  const ctx = useQuery({
+    queryKey: ["org-context", appointment?.organizationId ?? ""],
+    queryFn: () => api<OrganizationContext>(`/organizations/${appointment!.organizationId}/context`),
+    enabled: !!appointment,
+  });
+
+  const price = ctx.data?.services
+    .find((s) => s.id === appointment?.serviceId)
+    ?.serviceLocations?.find((sl) => sl.locationId === appointment?.locationId)?.price;
+
 
   if (!appointment) return null;
 
