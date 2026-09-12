@@ -321,13 +321,35 @@ function DetailModal({
       )}
 
       {view === "reschedule" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <div className="card-zen space-y-1 p-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Datos que se conservan
+            </p>
+            <p className="text-lg font-bold leading-snug">{appointment.clientName}</p>
+            <p className="text-base text-muted-foreground">{appointment.clientPhone}</p>
+            <p className="text-base">
+              {appointment.service?.name ?? "Sin servicio"}
+              {typeof price === "number" && (
+                <span className="font-semibold text-gold"> · ${price}</span>
+              )}
+            </p>
+            <p className="text-base text-muted-foreground">
+              {appointment.location?.name ?? "Sin ubicación"}
+            </p>
+          </div>
+
           <Field label="Nueva fecha">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
           </Field>
           <Field label="Nueva hora">
             <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} />
           </Field>
+          {hasCollision && (
+            <p className="rounded-xl border border-status-pending/40 bg-status-pending-bg px-3 py-2 text-base font-semibold text-status-pending">
+              Aviso: Ya tienes una cita programada en este horario.
+            </p>
+          )}
           <button
             disabled={!date || !time || rescheduleM.isPending}
             onClick={() => rescheduleM.mutate()}
@@ -337,6 +359,7 @@ function DetailModal({
           </button>
         </div>
       )}
+
 
       {view === "cancel" && (
         <div className="space-y-3">
