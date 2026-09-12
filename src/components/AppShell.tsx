@@ -195,6 +195,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           );
         })}
       </nav>
+
+      <Confirm
+        open={logoutOpen}
+        large
+        title="Cerrar sesión"
+        message="¿Estás seguro de que deseas cerrar sesión?"
+        confirmLabel="Sí, salir"
+        cancelLabel="Cancelar"
+        onConfirm={confirmLogout}
+        onCancel={() => setLogoutOpen(false)}
+      />
     </div>
   );
 }
