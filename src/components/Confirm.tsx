@@ -24,10 +24,7 @@ export function Confirm({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const confirmCls =
-    tone === "primary"
-      ? "btn-primary"
-      : "rounded-md bg-destructive font-bold text-destructive-foreground transition-[filter] hover:brightness-110 active:brightness-90 disabled:opacity-60";
+  const confirmCls = tone === "primary" ? "btn-primary" : "btn-3d btn-3d-danger";
 
   return (
     <Modal
