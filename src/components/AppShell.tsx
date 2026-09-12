@@ -4,6 +4,7 @@ import { BarChart3, CalendarDays, LogOut, Moon, Store, Sun, Users } from "lucide
 import { useEffect, useState, type ReactNode } from "react";
 
 import { BusinessBrand, PlatformSeal } from "@/components/Brand";
+import { Confirm } from "@/components/Confirm";
 import { api, auth } from "@/lib/api";
 import { applyBranding } from "@/lib/branding";
 import { useTheme } from "@/lib/theme";
