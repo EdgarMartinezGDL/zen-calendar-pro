@@ -307,13 +307,55 @@ function DetailModal({
           <button
             disabled={cancelM.isPending}
             onClick={() => cancelM.mutate()}
-            className="w-full rounded-md bg-destructive px-5 py-3.5 text-lg font-bold text-destructive-foreground transition-[filter] hover:brightness-110 disabled:opacity-60"
+            className="btn-3d btn-3d-danger w-full px-5 py-3.5 text-lg"
           >
             Confirmar cancelación
           </button>
         </div>
       )}
     </Modal>
+
+    <Confirm
+      open={confirm === "attended"}
+      large
+      tone="primary"
+      title="Confirmar asistencia"
+      message="¿Confirmar asistencia? El valor de esta cita se registrará en tus ingresos."
+      confirmLabel="Confirmar Asistencia"
+      pending={statusM.isPending}
+      onCancel={() => setConfirm(null)}
+      onConfirm={() => {
+        setConfirm(null);
+        statusM.mutate("COMPLETED");
+      }}
+    />
+    <Confirm
+      open={confirm === "noshow"}
+      large
+      title="Marcar inasistencia"
+      message="¿Marcar como inasistencia? Esta cita no generará ingresos."
+      confirmLabel="Confirmar Inasistencia"
+      pending={statusM.isPending}
+      onCancel={() => setConfirm(null)}
+      onConfirm={() => {
+        setConfirm(null);
+        statusM.mutate("CANCELLED");
+      }}
+    />
+    <Confirm
+      open={confirm === "reschedule"}
+      large
+      tone="primary"
+      title="Reagendar cita"
+      message="¿Deseas reagendar esta cita? Se marcará en tu historial de reportes y podrás seleccionar una nueva fecha."
+      confirmLabel="Reagendar Cita"
+      onCancel={() => setConfirm(null)}
+      onConfirm={() => {
+        setConfirm(null);
+        setView("reschedule");
+      }}
+    />
+    </>
   );
 }
 
