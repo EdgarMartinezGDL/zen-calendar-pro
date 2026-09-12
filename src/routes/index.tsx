@@ -248,22 +248,32 @@ function DetailModal({
             value={`${fmtDate(new Date(appointment.startAt))} · ${fmtTime(appointment.startAt)}`}
           />
           <Row label="Notas" value={appointment.notes ?? "—"} />
-          {editable && (
-            <div className="flex gap-3 pt-5">
-              <button
-                onClick={() => setView("reschedule")}
-                className="flex-1 btn-primary px-4 py-3 text-base font-semibold text-primary-foreground"
-              >
-                Reagendar
-              </button>
-              <button
-                onClick={() => setView("cancel")}
-                className="flex-1 rounded-lg border border-border px-4 py-3 text-base font-semibold text-destructive"
-              >
-                Cancelar cita
-              </button>
-            </div>
-          )}
+          <div className="grid grid-cols-1 gap-3 pt-5 sm:grid-cols-2">
+            <button
+              onClick={() => setConfirm("attended")}
+              className="btn-3d btn-3d-primary px-4 py-3.5 text-base"
+            >
+              Paciente Asistió
+            </button>
+            <button
+              onClick={() => setConfirm("noshow")}
+              className="btn-3d btn-3d-warning px-4 py-3.5 text-base"
+            >
+              No Asistió
+            </button>
+            <button
+              onClick={() => setConfirm("reschedule")}
+              className="btn-3d btn-3d-info px-4 py-3.5 text-base"
+            >
+              Reagendar
+            </button>
+            <button
+              onClick={() => setView("cancel")}
+              className="btn-3d btn-3d-danger px-4 py-3.5 text-base"
+            >
+              Cancelar Cita
+            </button>
+          </div>
         </div>
       )}
 
