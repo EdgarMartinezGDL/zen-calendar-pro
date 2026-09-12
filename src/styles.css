@@ -128,28 +128,67 @@
   }
 
   body {
-    background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    background-color: var(--color-background);
+    background-image:
+      radial-gradient(60rem 40rem at 10% -10%, oklch(0.65 0.12 195 / 0.18), transparent 70%),
+      radial-gradient(50rem 35rem at 100% 0%, oklch(0.7 0.13 60 / 0.14), transparent 70%),
+      radial-gradient(70rem 50rem at 50% 120%, oklch(0.55 0.1 265 / 0.22), transparent 70%),
+      linear-gradient(180deg, var(--color-background), color-mix(in oklab, var(--color-background) 82%, black));
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    border-radius: var(--radius-xl);
+    background-color: color-mix(in oklab, var(--color-card) 55%, transparent);
+    backdrop-filter: blur(8px);
+    border-color: color-mix(in oklab, var(--color-foreground) 14%, transparent);
+    box-shadow:
+      inset 0 2px 4px oklch(0 0 0 / 0.18),
+      0 1px 0 color-mix(in oklab, white 22%, transparent);
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    box-shadow:
+      inset 0 2px 5px oklch(0 0 0 / 0.22),
+      0 0 0 2px color-mix(in oklab, var(--color-ring) 65%, transparent);
   }
 }
 
 @utility card-zen {
-  background-color: var(--color-card);
+  background-color: color-mix(in oklab, var(--color-card) 58%, transparent);
+  backdrop-filter: blur(16px) saturate(130%);
   color: var(--color-card-foreground);
-  border: 1px solid var(--color-border);
+  border: 1px solid color-mix(in oklab, white 14%, transparent);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    0 20px 40px -24px oklch(0 0 0 / 0.55),
+    inset 0 1px 0 color-mix(in oklab, white 18%, transparent);
 }
 
 /* Botón principal de acción: verde saturado, texto en negrita y estados claros. */
 @utility btn-primary {
-  background-color: var(--color-primary);
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--color-primary) 82%, white),
+    var(--color-primary) 55%,
+    color-mix(in oklab, var(--color-primary) 82%, black)
+  );
   color: var(--color-primary-foreground);
   font-weight: 700;
-  border-radius: var(--radius);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  border: 1px solid color-mix(in oklab, white 25%, transparent);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 10px 20px -8px color-mix(in oklab, var(--color-primary) 60%, transparent),
+    inset 0 1px 0 color-mix(in oklab, white 45%, transparent),
+    inset 0 -2px 6px oklch(0 0 0 / 0.25);
   transition:
     filter 0.15s ease,
     transform 0.1s ease;
@@ -172,5 +211,24 @@
     opacity: 0.6;
     filter: none;
     transform: none;
+    box-shadow: none;
   }
 }
+
+/* Insignias de estado con acabado cristalino en relieve. */
+@layer components {
+  [class*="bg-status-"] {
+    background-image: linear-gradient(
+      to bottom,
+      color-mix(in oklab, white 22%, transparent),
+      transparent 60%,
+      oklch(0 0 0 / 0.12)
+    );
+    border: 1px solid color-mix(in oklab, white 18%, transparent);
+    box-shadow:
+      0 6px 14px -8px oklch(0 0 0 / 0.55),
+      inset 0 1px 0 color-mix(in oklab, white 35%, transparent);
+    backdrop-filter: blur(6px);
+  }
+}
+
