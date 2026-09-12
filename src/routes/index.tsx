@@ -229,7 +229,6 @@ function DetailModal({
   });
 
   if (!appointment) return null;
-  const editable = appointment.status === "PENDING" || appointment.status === "CONFIRMED";
 
   return (
     <>
