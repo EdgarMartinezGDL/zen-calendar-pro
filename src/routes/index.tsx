@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
+import { Confirm } from "@/components/Confirm";
 import { Modal } from "@/components/Modal";
 import { api, auth } from "@/lib/api";
 import type { Appointment, AppointmentStatus, OrganizationContext } from "@/types";
