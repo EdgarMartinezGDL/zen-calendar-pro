@@ -185,12 +185,21 @@ function DetailModal({
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<"attended" | "noshow" | "reschedule" | null>(null);
 
   const close = () => {
     setView("detail");
+    setConfirm(null);
     setError(null);
     onClose();
   };
+
+  const statusM = useMutation({
+    mutationFn: (status: AppointmentStatus) =>
+      api(`/appointments/${appointment!.id}`, { method: "PATCH", body: { status } }),
+    onSuccess: onDone,
+    onError: (e: Error) => setError(e.message),
+  });
 
   const cancelM = useMutation({
     mutationFn: () =>
