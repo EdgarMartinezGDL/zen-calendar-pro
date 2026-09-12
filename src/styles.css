@@ -112,6 +112,10 @@
   --gold: oklch(0.837 0.164 84.4);
   --gold-soft: oklch(0.71 0.125 82);
   --destructive: oklch(0.711 0.166 22.2);
+  --warning: oklch(0.8 0.15 62);
+  --warning-foreground: oklch(0.208 0.04 265.8);
+  --info: oklch(0.72 0.13 248);
+  --info-foreground: oklch(0.208 0.04 265.8);
   --destructive-foreground: oklch(0.208 0.04 265.8);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
