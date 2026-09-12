@@ -229,7 +229,50 @@ function DetailModal({
     onError: (e: Error) => setError(e.message),
   });
 
+  const dayAppts = useQuery({
+    queryKey: ["appointments-day", appointment?.organizationId ?? "", date],
+    enabled: view === "reschedule" && !!date && !!appointment,
+    queryFn: () => {
+      const from = new Date(`${date}T00:00:00`);
+      const to = new Date(`${date}T23:59:59`);
+      return api<Appointment[]>(
+        `/appointments?organizationId=${appointment!.organizationId}&from=${encodeURIComponent(
+          from.toISOString(),
+        )}&to=${encodeURIComponent(to.toISOString())}`,
+      );
+    },
+  });
+
+  const duration = appointment
+    ? new Date(appointment.endAt).getTime() - new Date(appointment.startAt).getTime()
+    : 0;
+
+  const hasCollision = useMemo(() => {
+    if (!date || !time || !appointment || !dayAppts.data) return false;
+    const start = new Date(`${date}T${time}`).getTime();
+    const end = start + duration;
+    return dayAppts.data.some((a) => {
+      if (a.id === appointment.id) return false;
+      if (a.status === "CANCELLED") return false;
+      const s = new Date(a.startAt).getTime();
+      const e = new Date(a.endAt).getTime();
+      return start < e && s < end;
+    });
+  }, [date, time, appointment, dayAppts.data, duration]);
+
+  const ctx = useQuery({
+    queryKey: ["org-context", appointment?.organizationId ?? ""],
+    queryFn: () => api<OrganizationContext>(`/organizations/${appointment!.organizationId}/context`),
+    enabled: !!appointment,
+  });
+
+  const price = ctx.data?.services
+    .find((s) => s.id === appointment?.serviceId)
+    ?.serviceLocations?.find((sl) => sl.locationId === appointment?.locationId)?.price;
+
+
   if (!appointment) return null;
+
 
   return (
     <>
@@ -278,13 +321,35 @@ function DetailModal({
       )}
 
       {view === "reschedule" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <div className="card-zen space-y-1 p-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Datos que se conservan
+            </p>
+            <p className="text-lg font-bold leading-snug">{appointment.clientName}</p>
+            <p className="text-base text-muted-foreground">{appointment.clientPhone}</p>
+            <p className="text-base">
+              {appointment.service?.name ?? "Sin servicio"}
+              {typeof price === "number" && (
+                <span className="font-semibold text-gold"> · ${price}</span>
+              )}
+            </p>
+            <p className="text-base text-muted-foreground">
+              {appointment.location?.name ?? "Sin ubicación"}
+            </p>
+          </div>
+
           <Field label="Nueva fecha">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
           </Field>
           <Field label="Nueva hora">
             <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} />
           </Field>
+          {hasCollision && (
+            <p className="rounded-xl border border-status-pending/40 bg-status-pending-bg px-3 py-2 text-base font-semibold text-status-pending">
+              Aviso: Ya tienes una cita programada en este horario.
+            </p>
+          )}
           <button
             disabled={!date || !time || rescheduleM.isPending}
             onClick={() => rescheduleM.mutate()}
@@ -294,6 +359,7 @@ function DetailModal({
           </button>
         </div>
       )}
+
 
       {view === "cancel" && (
         <div className="space-y-3">
@@ -353,7 +419,12 @@ function DetailModal({
       onCancel={() => setConfirm(null)}
       onConfirm={() => {
         setConfirm(null);
+        const d = new Date(appointment.startAt);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        setDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+        setTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
         setView("reschedule");
+
       }}
     />
     </>
