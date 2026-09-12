@@ -229,7 +229,43 @@ function DetailModal({
     onError: (e: Error) => setError(e.message),
   });
 
+  const dayAppts = useQuery({
+    queryKey: ["appointments-day", appointment?.organizationId ?? "", date],
+    enabled: view === "reschedule" && !!date && !!appointment,
+    queryFn: () => {
+      const from = new Date(`${date}T00:00:00`);
+      const to = new Date(`${date}T23:59:59`);
+      return api<Appointment[]>(
+        `/appointments?organizationId=${appointment!.organizationId}&from=${encodeURIComponent(
+          from.toISOString(),
+        )}&to=${encodeURIComponent(to.toISOString())}`,
+      );
+    },
+  });
+
+  const duration = appointment
+    ? new Date(appointment.endAt).getTime() - new Date(appointment.startAt).getTime()
+    : 0;
+
+  const hasCollision = useMemo(() => {
+    if (!date || !time || !appointment || !dayAppts.data) return false;
+    const start = new Date(`${date}T${time}`).getTime();
+    const end = start + duration;
+    return dayAppts.data.some((a) => {
+      if (a.id === appointment.id) return false;
+      if (a.status === "CANCELLED") return false;
+      const s = new Date(a.startAt).getTime();
+      const e = new Date(a.endAt).getTime();
+      return start < e && s < end;
+    });
+  }, [date, time, appointment, dayAppts.data, duration]);
+
+  const price = appointment?.service?.serviceLocations?.find(
+    (sl) => sl.locationId === appointment?.locationId,
+  )?.price;
+
   if (!appointment) return null;
+
 
   return (
     <>
