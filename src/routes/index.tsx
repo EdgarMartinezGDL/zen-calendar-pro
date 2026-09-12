@@ -419,7 +419,12 @@ function DetailModal({
       onCancel={() => setConfirm(null)}
       onConfirm={() => {
         setConfirm(null);
+        const d = new Date(appointment.startAt);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        setDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+        setTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
         setView("reschedule");
+
       }}
     />
     </>
