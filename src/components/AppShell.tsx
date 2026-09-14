@@ -130,7 +130,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Cabecera móvil */}
-      <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-card px-3 py-0 md:hidden">
+      <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-border bg-card px-2 py-0 md:hidden">
+        <button
+          onClick={() => setMenuOpen(true)}
+          aria-label="Abrir menú"
+          className="relative z-50 shrink-0 rounded-lg border border-border/60 p-2 text-foreground transition-colors hover:bg-accent"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         {/* Bloque izquierdo: logo + nombre */}
         <div className="flex h-full min-w-0 flex-1 items-center gap-2">
           {org?.logoUrl ? (
