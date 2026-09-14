@@ -183,6 +183,61 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
+      {/* Drawer lateral móvil */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="absolute inset-0 bg-foreground/50 backdrop-blur-sm"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden
+          />
+          <aside className="relative z-10 flex h-full w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar p-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-2">
+              <BusinessBrand name={businessName} logoUrl={org?.logoUrl} nameSize={headerNameSize} />
+              <button
+                onClick={() => setMenuOpen(false)}
+                aria-label="Cerrar menú"
+                className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="mt-6 flex flex-1 flex-col gap-1">
+              {NAV.map(({ to, label, icon: Icon }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  activeOptions={{ exact: to === "/" }}
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-md px-3 py-3 text-base font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+                >
+                  <Icon className="h-5 w-5" />
+                  {label}
+                </Link>
+              ))}
+            </nav>
+            <div className="border-t border-sidebar-border pt-3">
+              <div className="px-3 pb-3">
+                <PlatformSeal />
+              </div>
+              <p className="truncate px-3 pb-2 text-xs text-muted-foreground">{user?.fullName}</p>
+              <ThemeToggle full />
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  logout();
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                Salir
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+
       <main className="px-4 pt-4 pb-28 md:ml-64 md:px-8 md:py-8">{children}</main>
 
       {/* Bottom nav móvil */}
