@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { BarChart3, CalendarDays, LogOut, Moon, Store, Sun, Users } from "lucide-react";
+import { BarChart3, CalendarDays, LogOut, Moon, Store, Sun, Users, Wallet } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { BusinessBrand, PlatformSeal } from "@/components/Brand";
