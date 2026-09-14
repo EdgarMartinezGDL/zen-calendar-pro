@@ -112,6 +112,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               {label}
             </Link>
           ))}
+          <Link
+            to="/billing"
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+          >
+            <Wallet className="h-4 w-4" />
+            Facturación
+          </Link>
         </nav>
         <div className="border-t border-sidebar-border pt-3">
           <div className="px-3 pb-3">

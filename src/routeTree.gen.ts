@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BillingRouteImport } from './routes/billing'
 import { Route as EventosRouteImport } from './routes/eventos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NegocioRouteImport } from './routes/negocio'
@@ -18,6 +19,11 @@ import { Route as ReportesRouteImport } from './routes/reportes'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingRoute = BillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventosRoute = EventosRouteImport.update({
@@ -43,6 +49,7 @@ const ReportesRoute = ReportesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/billing': typeof BillingRoute
   '/eventos': typeof EventosRoute
   '/login': typeof LoginRoute
   '/negocio': typeof NegocioRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/billing': typeof BillingRoute
   '/eventos': typeof EventosRoute
   '/login': typeof LoginRoute
   '/negocio': typeof NegocioRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/billing': typeof BillingRoute
   '/eventos': typeof EventosRoute
   '/login': typeof LoginRoute
   '/negocio': typeof NegocioRoute
@@ -65,14 +74,22 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/eventos' | '/login' | '/negocio' | '/reportes'
+  fullPaths: '/' | '/billing' | '/eventos' | '/login' | '/negocio' | '/reportes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/eventos' | '/login' | '/negocio' | '/reportes'
-  id: '__root__' | '/' | '/eventos' | '/login' | '/negocio' | '/reportes'
+  to: '/' | '/billing' | '/eventos' | '/login' | '/negocio' | '/reportes'
+  id:
+    | '__root__'
+    | '/'
+    | '/billing'
+    | '/eventos'
+    | '/login'
+    | '/negocio'
+    | '/reportes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BillingRoute: typeof BillingRoute
   EventosRoute: typeof EventosRoute
   LoginRoute: typeof LoginRoute
   NegocioRoute: typeof NegocioRoute
@@ -86,6 +103,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing': {
+      id: '/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof BillingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/eventos': {
@@ -121,6 +145,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BillingRoute: BillingRoute,
   EventosRoute: EventosRoute,
   LoginRoute: LoginRoute,
   NegocioRoute: NegocioRoute,
