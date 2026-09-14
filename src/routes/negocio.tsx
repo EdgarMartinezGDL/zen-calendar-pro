@@ -1204,6 +1204,7 @@ function SlotsTab({ orgId }: { orgId: string }) {
 
 function SettingsTab({ orgId }: { orgId: string }) {
   const [open, setOpen] = useState<null | "ia" | "marca" | "politica" | "cuenta">(null);
+  const [billing, setBilling] = useState(false);
 
   const cards = [
     { key: "ia" as const, title: "Asistente de IA", desc: "Nombre, tono y mensajes automáticos." },
@@ -1211,6 +1212,22 @@ function SettingsTab({ orgId }: { orgId: string }) {
     { key: "politica" as const, title: "Política de cancelación", desc: "Plazos y penalizaciones." },
     { key: "cuenta" as const, title: "Mi Cuenta", desc: "Correo de acceso y contraseña." },
   ];
+
+  if (billing) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setBilling(false)}
+          className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Volver a Configuración
+        </button>
+        <h2 className="text-xl font-bold tracking-tight">Facturación y Créditos</h2>
+        <BillingPanel />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -1223,6 +1240,14 @@ function SettingsTab({ orgId }: { orgId: string }) {
             </button>
           </li>
         ))}
+        <li>
+          <button onClick={() => setBilling(true)} className="card-zen w-full p-4 text-left hover:bg-accent/40">
+            <p className="font-semibold">Facturación y Créditos</p>
+            <p className="text-xs text-muted-foreground">
+              Saldo, plan, recargas e historial de consumo.
+            </p>
+          </button>
+        </li>
       </CardList>
 
       {open === "ia" && <AIModal orgId={orgId} onClose={() => setOpen(null)} />}
