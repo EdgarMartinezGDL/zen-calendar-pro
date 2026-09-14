@@ -40,6 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<{ fullName: string; organizationId: string } | null>(null);
   const [checked, setChecked] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const orgId = user?.organizationId;
   const { data: org } = useQuery({
