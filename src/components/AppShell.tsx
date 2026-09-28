@@ -131,7 +131,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Cabecera móvil */}
-      <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-border bg-card/80 px-2 py-0 backdrop-blur-md md:hidden">
+      <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-border bg-card px-2 py-0 md:hidden">
         <button
           onClick={() => setMenuOpen(true)}
           aria-label="Abrir menú"
@@ -241,22 +241,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="px-4 pt-4 pb-28 md:ml-64 md:px-8 md:py-8">{children}</main>
 
       {/* Bottom nav móvil */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-foreground/10 bg-card/70 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
         {NAV.map(({ to, label, icon: Icon }) => {
           const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
           return (
             <Link
               key={to}
               to={to}
-              className={`relative flex flex-col items-center gap-1 pt-3 pb-2.5 text-[11px] font-medium transition-colors ${
-                active ? "text-primary" : "text-muted-foreground/70 hover:text-foreground"
+              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+                active ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              <span
-                aria-hidden
-                className={`absolute top-0 h-0.5 w-8 rounded-full bg-primary transition-opacity ${active ? "opacity-100" : "opacity-0"}`}
-              />
-              <Icon className="h-5 w-5" strokeWidth={active ? 2.25 : 1.75} />
+              <Icon className="h-5 w-5" />
               {label}
             </Link>
           );
