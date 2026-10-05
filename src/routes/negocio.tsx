@@ -25,7 +25,7 @@ import {
   type UpdateAISettingsInput,
 } from "@/lib/microfix/api";
 import { useAuth } from "@/lib/microfix/auth";
-import { compact, errorText, nextDateForDow } from "@/lib/microfix-ui";
+import { compact, errorText } from "@/lib/microfix-ui";
 import { applyBranding } from "@/lib/branding";
 import type {
   AISettings,
@@ -649,8 +649,8 @@ function HoursTab({ orgId }: { orgId: string }) {
   const { data } = useQuery({
     queryKey: ["business-hours", orgId],
     queryFn: async () =>
-      (await businessHoursApi.list(orgId)).map(
-        (h) => ({ ...h, date: nextDateForDow(h.dayOfWeek), capacity: 1 }) as unknown as BusinessHour,
+      (await businessHoursApi.list(orgId, { from: todayYmd() })).map(
+        (h) => ({ ...h, capacity: h.slotCapacity ?? 1 }) as unknown as BusinessHour,
       ),
   });
   const { data: locations } = useQuery({
@@ -708,9 +708,10 @@ function HoursTab({ orgId }: { orgId: string }) {
 
   const save = useMutation({
     mutationFn: () => {
-      // El backend guarda horarios semanales: la fecha elegida define el día de la semana.
       const body = {
-        dayOfWeek: new Date(`${form.date}T00:00:00`).getDay(),
+        date: form.date,
+        slotCapacity: Math.max(1, Number(form.capacity) || 1),
+        locationId: form.locationId,
         startTime: form.startTime,
         endTime: form.endTime,
         appointmentDuration: Number(form.appointmentDuration),
@@ -718,12 +719,8 @@ function HoursTab({ orgId }: { orgId: string }) {
         isActive: form.isActive,
       };
       return editing
-        ? businessHoursApi.update(editing.id, { ...body, locationId: form.locationId || null })
-        : businessHoursApi.create({
-            organizationId: orgId,
-            ...body,
-            ...(form.locationId ? { locationId: form.locationId } : {}),
-          });
+        ? businessHoursApi.update(editing.id, body)
+        : businessHoursApi.create({ organizationId: orgId, ...body });
     },
     onSuccess: () => {
       refresh();
@@ -751,6 +748,14 @@ function HoursTab({ orgId }: { orgId: string }) {
       setError("La hora final debe ser posterior a la inicial.");
       return;
     }
+    if (!form.locationId) {
+      setError("Selecciona una ubicación para el bloque.");
+      return;
+    }
+    if (form.date < today) {
+      setError("No puedes elegir una fecha pasada.");
+      return;
+    }
     if (hasOverlap()) {
       setOverlapStep(1);
       return;
@@ -766,6 +771,7 @@ function HoursTab({ orgId }: { orgId: string }) {
       setConfirming(false);
       close();
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   const renderGroup = ([date, list]: [string, BusinessHour[]]) => (
@@ -1014,7 +1020,7 @@ function SlotsTab({ orgId }: { orgId: string }) {
     queryKey: ["business-hours", orgId],
     queryFn: async () =>
       (await businessHoursApi.list(orgId)).map(
-        (h) => ({ ...h, date: nextDateForDow(h.dayOfWeek), capacity: 1 }) as unknown as BusinessHour,
+        (h) => ({ ...h, capacity: h.slotCapacity ?? 1 }) as unknown as BusinessHour,
       ),
   });
 
