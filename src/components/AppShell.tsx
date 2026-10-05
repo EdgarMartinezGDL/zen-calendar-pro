@@ -5,7 +5,8 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { BusinessBrand, PlatformSeal } from "@/components/Brand";
 import { Confirm } from "@/components/Confirm";
-import { api, auth } from "@/lib/api";
+import { organizationApi } from "@/lib/microfix/api";
+import { useAuth } from "@/lib/microfix/auth";
 import { applyBranding } from "@/lib/branding";
 import { useTheme } from "@/lib/theme";
 import type { Organization } from "@/types";
@@ -37,15 +38,15 @@ function ThemeToggle({ full = false }: { full?: boolean }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [user, setUser] = useState<{ fullName: string; organizationId: string } | null>(null);
-  const [checked, setChecked] = useState(false);
+  const { user, ready, logout: endSession } = useAuth();
+  const checked = ready && !!user;
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const orgId = user?.organizationId;
   const { data: org } = useQuery({
     queryKey: ["organization", orgId],
-    queryFn: () => api<Organization>(`/organizations/${orgId}`),
+    queryFn: () => organizationApi.get(orgId!) as Promise<Organization>,
     enabled: !!orgId,
   });
   const businessName = org?.headerName?.trim() || org?.name || "Mi Negocio";
@@ -73,20 +74,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [org]);
 
   useEffect(() => {
-    const current = auth.getUser();
-    if (!auth.getToken() || !current) {
-      navigate({ to: "/login" });
-      return;
-    }
-    setUser(current);
-    setChecked(true);
-  }, [navigate]);
+    if (ready && !user) navigate({ to: "/login" });
+  }, [ready, user, navigate]);
 
   const logout = () => setLogoutOpen(true);
 
   const confirmLogout = () => {
     setLogoutOpen(false);
-    auth.clear();
+    endSession();
     navigate({ to: "/login" });
   };
 

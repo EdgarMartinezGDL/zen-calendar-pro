@@ -10,7 +10,22 @@ import { BillingPanel } from "@/components/BillingPanel";
 import { Modal } from "@/components/Modal";
 import { Confirm } from "@/components/Confirm";
 import { Field, inputCls } from "@/routes/index";
-import { api, auth } from "@/lib/api";
+import {
+  aiSettingsApi,
+  appointmentSlotsApi,
+  authApi,
+  businessHoursApi,
+  locationsApi,
+  organizationApi,
+  serviceLocationsApi,
+  servicesApi,
+  type CreateLocationInput,
+  type CreateServiceInput,
+  type UpdateBrandingInput,
+  type UpdateAISettingsInput,
+} from "@/lib/microfix/api";
+import { useAuth } from "@/lib/microfix/auth";
+import { compact, errorText, nextDateForDow } from "@/lib/microfix-ui";
 import { applyBranding } from "@/lib/branding";
 import type {
   AISettings,
@@ -49,7 +64,7 @@ type Tab = (typeof TABS)[number];
 
 function NegocioPage() {
   const [tab, setTab] = useState<Tab>("Ubicaciones");
-  const orgId = auth.getUser()?.organizationId ?? "";
+  const orgId = useAuth().user?.organizationId ?? "";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -107,7 +122,7 @@ function LocationsTab({ orgId }: { orgId: string }) {
 
   const { data } = useQuery({
     queryKey: ["locations", orgId],
-    queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
+    queryFn: () => locationsApi.list(orgId) as unknown as Promise<Location[]>,
   });
 
   const [form, setForm] = useState({
@@ -142,37 +157,38 @@ function LocationsTab({ orgId }: { orgId: string }) {
 
   const save = useMutation({
     mutationFn: () => {
-      const body = {
+      const body = compact({
         name: form.name,
         address: form.address || undefined,
-        mapsUrl: form.mapsUrl.trim() || null,
+        mapsUrl: form.mapsUrl.trim() || undefined,
         phone: form.phone || undefined,
         email: form.email || undefined,
         isActive: form.isActive,
-      };
+      }) as Omit<CreateLocationInput, "organizationId">;
       return editing
-        ? api(`/locations/${editing.id}`, { method: "PATCH", body })
-        : api("/locations", { method: "POST", body: { organizationId: orgId, ...body } });
+        ? locationsApi.update(editing.id, { ...body, mapsUrl: form.mapsUrl.trim() || null })
+        : locationsApi.create({ organizationId: orgId, ...body });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["locations"] });
       toast.success(editing ? "Ubicación actualizada" : "Ubicación agregada");
       close();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const remove = useMutation({
-    mutationFn: () => api(`/locations/${editing!.id}`, { method: "DELETE" }),
+    // El backend no borra sedes: se desactivan.
+    mutationFn: () => locationsApi.update(editing!.id, { isActive: false }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["locations"] });
-      toast.success("Ubicación eliminada");
+      toast.success("Ubicación desactivada");
       setConfirming(false);
       close();
     },
     onError: (e: Error) => {
       setConfirming(false);
-      setError(e.message);
+      setError(errorText(e));
     },
   });
 
@@ -304,7 +320,7 @@ function LocationsTab({ orgId }: { orgId: string }) {
 
       <Confirm
         open={confirming}
-        message={`Se eliminará “${editing?.name ?? ""}” de forma permanente. ¿Deseas continuar?`}
+        message={`Se desactivará “${editing?.name ?? ""}” (no se borra). ¿Deseas continuar?`}
         pending={remove.isPending}
         onConfirm={() => remove.mutate()}
         onCancel={() => setConfirming(false)}
@@ -340,7 +356,7 @@ function ServicesTab({ orgId }: { orgId: string }) {
 
   const { data } = useQuery({
     queryKey: ["services", orgId],
-    queryFn: () => api<Service[]>(`/services?organizationId=${orgId}`),
+    queryFn: () => servicesApi.list(orgId) as unknown as Promise<Service[]>,
   });
 
   const editing = (data ?? []).find((s) => s.id === editingId) ?? null;
@@ -365,16 +381,16 @@ function ServicesTab({ orgId }: { orgId: string }) {
 
   const save = useMutation({
     mutationFn: () => {
-      const body = {
+      const body = compact({
         name: form.name,
         description: form.description || undefined,
         durationMinutes: Number(form.durationMinutes),
         requiredAttendees: Number(form.requiredAttendees),
         isActive: form.isActive,
-      };
+      }) as Omit<CreateServiceInput, "organizationId">;
       return editing
-        ? api<Service>(`/services/${editing.id}`, { method: "PATCH", body })
-        : api<Service>("/services", { method: "POST", body: { organizationId: orgId, ...body } });
+        ? servicesApi.update(editing.id, body)
+        : servicesApi.create({ organizationId: orgId, ...body });
     },
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ["services"] });
@@ -383,23 +399,24 @@ function ServicesTab({ orgId }: { orgId: string }) {
       } else {
         toast.success("Servicio agregado. Ahora puedes asignarle ubicaciones.");
         setCreating(false);
-        setEditingId((created as Service)?.id ?? null);
+        setEditingId((created as unknown as Service)?.id ?? null);
       }
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const remove = useMutation({
-    mutationFn: () => api(`/services/${editingId}`, { method: "DELETE" }),
+    // El backend no borra servicios: se desactivan.
+    mutationFn: () => servicesApi.update(editingId!, { isActive: false }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
-      toast.success("Servicio eliminado");
+      toast.success("Servicio desactivado");
       setConfirming(false);
       close();
     },
     onError: (e: Error) => {
       setConfirming(false);
-      setError(e.message);
+      setError(errorText(e));
     },
   });
 
@@ -468,7 +485,7 @@ function ServicesTab({ orgId }: { orgId: string }) {
 
       <Confirm
         open={confirming}
-        message={`Se eliminará el servicio “${editing?.name ?? ""}” y sus precios por ubicación. ¿Deseas continuar?`}
+        message={`Se desactivará el servicio “${editing?.name ?? ""}” (no se borra). ¿Deseas continuar?`}
         pending={remove.isPending}
         onConfirm={() => remove.mutate()}
         onCancel={() => setConfirming(false)}
@@ -484,18 +501,20 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
 
   const { data: locations } = useQuery({
     queryKey: ["locations", orgId],
-    queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
+    queryFn: () => locationsApi.list(orgId) as unknown as Promise<Location[]>,
   });
 
-  const linked = service.serviceLocations ?? [];
+  const allLinks = service.serviceLocations ?? [];
+  const linked = allLinks.filter((sl) => sl.isAvailable !== false);
   const available = (locations ?? []).filter((l) => !linked.some((sl) => sl.locationId === l.id));
 
   const add = useMutation({
-    mutationFn: () =>
-      api("/service-locations", {
-        method: "POST",
-        body: { serviceId: service.id, locationId, price: Number(price || 0) },
-      }),
+    mutationFn: () => {
+      const existing = allLinks.find((sl) => sl.locationId === locationId);
+      return existing
+        ? serviceLocationsApi.update(existing.id, { price: Number(price || 0), isAvailable: true })
+        : serviceLocationsApi.create({ serviceId: service.id, locationId, price: Number(price || 0) });
+    },
     onSuccess: async () => {
       const name = (locations ?? []).find((l) => l.id === locationId)?.name ?? "Ubicación";
       setPrice("");
@@ -503,24 +522,27 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
       await qc.invalidateQueries({ queryKey: ["services"] });
       toast.success(`${name} agregada a este servicio`);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   const update = useMutation({
     mutationFn: (vars: { id: string; price: number }) =>
-      api(`/service-locations/${vars.id}`, { method: "PATCH", body: { price: vars.price } }),
+      serviceLocationsApi.update(vars.id, { price: vars.price }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
       toast.success("Precio actualizado");
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   const unlink = useMutation({
-    mutationFn: (id: string) => api(`/service-locations/${id}`, { method: "DELETE" }),
+    // Sin borrado en el backend: se marca como no disponible.
+    mutationFn: (id: string) => serviceLocationsApi.update(id, { isAvailable: false }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
       toast.success("Ubicación quitada del servicio");
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   return (
@@ -626,11 +648,14 @@ function HoursTab({ orgId }: { orgId: string }) {
 
   const { data } = useQuery({
     queryKey: ["business-hours", orgId],
-    queryFn: () => api<BusinessHour[]>(`/business-hours?organizationId=${orgId}`),
+    queryFn: async () =>
+      (await businessHoursApi.list(orgId)).map(
+        (h) => ({ ...h, date: nextDateForDow(h.dayOfWeek), capacity: 1 }) as unknown as BusinessHour,
+      ),
   });
   const { data: locations } = useQuery({
     queryKey: ["locations", orgId],
-    queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
+    queryFn: () => locationsApi.list(orgId) as unknown as Promise<Location[]>,
   });
 
   const today = todayYmd();
@@ -683,26 +708,29 @@ function HoursTab({ orgId }: { orgId: string }) {
 
   const save = useMutation({
     mutationFn: () => {
+      // El backend guarda horarios semanales: la fecha elegida define el día de la semana.
       const body = {
-        date: form.date,
+        dayOfWeek: new Date(`${form.date}T00:00:00`).getDay(),
         startTime: form.startTime,
         endTime: form.endTime,
         appointmentDuration: Number(form.appointmentDuration),
         breakDuration: Number(form.breakDuration),
-        capacity: Number(form.capacity || 1),
-        locationId: form.locationId || undefined,
         isActive: form.isActive,
       };
       return editing
-        ? api(`/business-hours/${editing.id}`, { method: "PATCH", body })
-        : api("/business-hours", { method: "POST", body: { organizationId: orgId, ...body } });
+        ? businessHoursApi.update(editing.id, { ...body, locationId: form.locationId || null })
+        : businessHoursApi.create({
+            organizationId: orgId,
+            ...body,
+            ...(form.locationId ? { locationId: form.locationId } : {}),
+          });
     },
     onSuccess: () => {
       refresh();
       toast.success(editing ? "Horario actualizado" : "Bloque de horario agregado");
       close();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const hasOverlap = () => {
@@ -731,7 +759,7 @@ function HoursTab({ orgId }: { orgId: string }) {
   };
 
   const remove = useMutation({
-    mutationFn: () => api(`/business-hours/${editing!.id}`, { method: "DELETE" }),
+    mutationFn: () => businessHoursApi.remove(editing!.id),
     onSuccess: () => {
       refresh();
       toast.success("Bloque de horario eliminado");
@@ -971,20 +999,23 @@ function SlotsTab({ orgId }: { orgId: string }) {
 
   const { data: locations } = useQuery({
     queryKey: ["locations", orgId],
-    queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
+    queryFn: () => locationsApi.list(orgId) as unknown as Promise<Location[]>,
   });
 
   const { data } = useQuery({
     queryKey: ["slots", orgId, locationId, from],
     queryFn: () =>
-      api<AppointmentSlot[]>(
-        `/appointment-slots?organizationId=${orgId}${locationId ? `&locationId=${locationId}` : ""}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-      ),
+      appointmentSlotsApi.list(
+        compact({ organizationId: orgId, locationId: locationId || undefined, from, to }) as { organizationId: string },
+      ) as unknown as Promise<AppointmentSlot[]>,
   });
 
   const { data: hours } = useQuery({
     queryKey: ["business-hours", orgId],
-    queryFn: () => api<BusinessHour[]>(`/business-hours?organizationId=${orgId}`),
+    queryFn: async () =>
+      (await businessHoursApi.list(orgId)).map(
+        (h) => ({ ...h, date: nextDateForDow(h.dayOfWeek), capacity: 1 }) as unknown as BusinessHour,
+      ),
   });
 
   /** Partición matemática: intervalo = duración de cita + descanso. */
@@ -1040,39 +1071,35 @@ function SlotsTab({ orgId }: { orgId: string }) {
   const save = useMutation({
     mutationFn: () => {
       if (editing?.slot) {
-        return api(`/appointment-slots/${editing.slot.id}`, {
-          method: "PATCH",
-          body: { capacity: Number(capacity), isActive },
-        });
+        return appointmentSlotsApi.update(editing.slot.id, { capacity: Number(capacity), isActive });
       }
       const start = editing ? editing.startAt : new Date(`${newSlot.date}T${newSlot.time}`);
       const end = editing
         ? editing.endAt
         : new Date(start.getTime() + Number(newSlot.duration) * 60000);
-      return api("/appointment-slots", {
-        method: "POST",
-        body: {
-          organizationId: orgId,
-          locationId: editing?.locationId ?? (locationId || null),
-          startAt: start.toISOString(),
-          endAt: end.toISOString(),
-          capacity: Number(capacity),
-          isActive,
-        },
+      return appointmentSlotsApi.create({
+        organizationId: orgId,
+        locationId: (editing?.locationId ?? locationId) as string,
+        startAt: start.toISOString(),
+        endAt: end.toISOString(),
+        capacity: Number(capacity),
+        isActive,
       });
     },
     onSuccess: () => {
       refresh();
       close();
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   const remove = useMutation({
-    mutationFn: () => api(`/appointment-slots/${editing!.slot!.id}`, { method: "DELETE" }),
+    mutationFn: () => appointmentSlotsApi.remove(editing!.slot!.id),
     onSuccess: () => {
       refresh();
       close();
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   return (
@@ -1264,16 +1291,14 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const { data } = useQuery({
     queryKey: ["ai-settings", orgId],
-    queryFn: () => api<AISettings | null>(`/ai-settings/organization/${orgId}`),
+    queryFn: () => aiSettingsApi.get(orgId) as unknown as Promise<AISettings | null>,
   });
   const [form, setForm] = useState<Partial<AISettings>>({});
   const value = { ...(data ?? {}), ...form } as AISettings;
 
   const save = useMutation({
     mutationFn: () =>
-      api(`/ai-settings/organization/${orgId}`, {
-        method: "PATCH",
-        body: {
+      aiSettingsApi.update(orgId, {
           enabled: value.enabled ?? false,
           assistantName: value.assistantName ?? "",
           tone: value.tone ?? null,
@@ -1282,10 +1307,9 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
           fallbackMessage: value.fallbackMessage ?? null,
           formatWhatsappText: value.formatWhatsappText ?? false,
           allowHumanTakeover: value.allowHumanTakeover ?? false,
-        },
-      }),
+      } as UpdateAISettingsInput),
     onSuccess: onClose,
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const tone = value.tone ?? TONES[0]!;
@@ -1406,7 +1430,7 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
   const [error, setError] = useState<string | null>(null);
   const { data } = useQuery({
     queryKey: ["organization", orgId],
-    queryFn: () => api<Organization>(`/organizations/${orgId}`),
+    queryFn: () => organizationApi.get(orgId) as unknown as Promise<Organization>,
   });
   const [form, setForm] = useState<Partial<Organization>>({});
   const value = { ...(data ?? {}), ...form } as Organization;
@@ -1420,25 +1444,23 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
 
   const save = useMutation({
     mutationFn: () =>
-      api(`/organizations/${orgId}/branding`, {
-        method: "PATCH",
-        body: {
+      organizationApi.updateBranding(
+        orgId,
+        compact({
           theme: value.theme,
           logoUrl: value.logoUrl,
           primaryColor: value.primaryColor,
           secondaryColor: value.secondaryColor,
           fontFamily: value.fontFamily,
           fontScale: value.fontScale,
-          headerName: value.headerName?.trim() ? value.headerName.trim() : null,
-          headerNameSize: value.headerNameSize ?? "md",
-        },
-      }),
+        }) as UpdateBrandingInput,
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["organization"] });
       toast.success("Marca actualizada");
       onClose();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const big = `${inputCls} h-12 text-lg`;
@@ -1506,8 +1528,9 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         </Field>
         <hr className="border-border" />
         <h3 className="text-lg font-bold text-foreground">Identidad en Cabecera</h3>
-        <Field label="Nombre visible en cabecera">
+        <Field label="Nombre visible en cabecera (Próximamente)">
           <input
+            disabled
             className={big}
             placeholder={value.name ?? "Mi Negocio"}
             value={value.headerName ?? ""}
@@ -1517,8 +1540,9 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
           Si lo dejas vacío se usará el nombre de tu negocio.
         </p>
-        <Field label="Tamaño de nombre en cabecera">
+        <Field label="Tamaño de nombre en cabecera (Próximamente)">
           <select
+            disabled
             className={big}
             value={value.headerNameSize ?? "md"}
             onChange={(e) =>
@@ -1559,24 +1583,21 @@ function PolicyModal({ orgId, onClose }: { orgId: string; onClose: () => void })
   const [error, setError] = useState<string | null>(null);
   const { data } = useQuery({
     queryKey: ["organization", orgId],
-    queryFn: () => api<Organization>(`/organizations/${orgId}`),
+    queryFn: () => organizationApi.get(orgId) as unknown as Promise<Organization>,
   });
   const [form, setForm] = useState<Partial<Organization>>({});
   const value = { ...(data ?? {}), ...form } as Organization;
 
   const save = useMutation({
     mutationFn: () =>
-      api(`/organizations/${orgId}`, {
-        method: "PATCH",
-        body: {
-          allowClientCancellation: value.allowClientCancellation ?? false,
-          cancellationDeadlineHours: value.cancellationDeadlineHours ?? null,
-          hasCancellationPenalty: value.hasCancellationPenalty ?? false,
-          cancellationPenaltyText: value.cancellationPenaltyText ?? null,
-        },
+      organizationApi.updateCancellationPolicy(orgId, {
+        allowClientCancellation: value.allowClientCancellation ?? false,
+        cancellationDeadlineHours: value.cancellationDeadlineHours ?? null,
+        hasCancellationPenalty: value.hasCancellationPenalty ?? false,
+        cancellationPenaltyText: value.cancellationPenaltyText ?? null,
       }),
     onSuccess: onClose,
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   return (
@@ -1622,7 +1643,9 @@ function PolicyModal({ orgId, onClose }: { orgId: string; onClose: () => void })
 /* ---------------- Mi Cuenta ---------------- */
 
 function AccountModal({ onClose }: { onClose: () => void }) {
-  const email = auth.getUser()?.email ?? "";
+  const sessionEmail = useAuth().user?.email ?? "";
+  const { data: profile } = useQuery({ queryKey: ["auth-me"], queryFn: () => authApi.me() });
+  const email = profile?.email ?? sessionEmail;
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -1633,10 +1656,7 @@ function AccountModal({ onClose }: { onClose: () => void }) {
 
   const save = useMutation({
     mutationFn: () =>
-      api<null>("/auth/change-password", {
-        method: "POST",
-        body: { currentPassword: current, newPassword: next },
-      }),
+      authApi.changePassword(current, next),
     onSuccess: () => {
       setCurrent("");
       setNext("");
@@ -1644,7 +1664,7 @@ function AccountModal({ onClose }: { onClose: () => void }) {
       setError(null);
       toast.success("Contraseña actualizada correctamente");
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   return (

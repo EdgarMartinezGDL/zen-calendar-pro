@@ -8,7 +8,10 @@ import { Banner } from "@/components/Banner";
 import { Confirm } from "@/components/Confirm";
 import { Modal } from "@/components/Modal";
 import { Field, inputCls } from "@/routes/index";
-import { api, auth } from "@/lib/api";
+import { eventsApi, type CreateEventInput } from "@/lib/microfix/api";
+import { useAuth } from "@/lib/microfix/auth";
+import { compact, errorText } from "@/lib/microfix-ui";
+import { toast } from "sonner";
 import type { Event as ZenEvent, EventRegistration } from "@/types";
 
 export const Route = createFileRoute("/eventos")({
@@ -36,19 +39,20 @@ const fmt = (iso: string) =>
   });
 
 function EventosPage() {
-  const orgId = auth.getUser()?.organizationId ?? "";
+  const orgId = useAuth().user?.organizationId ?? "";
   const [editing, setEditing] = useState<ZenEvent | null>(null);
   const [creating, setCreating] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["events", orgId],
-    queryFn: () => api<ZenEvent[]>(`/events?organizationId=${orgId}`),
+    queryFn: () => eventsApi.list({ organizationId: orgId }) as unknown as Promise<ZenEvent[]>,
+    enabled: !!orgId,
   });
 
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-5 text-2xl font-bold tracking-tight">Talleres y eventos</h1>
-      {error && <Banner kind="error" message={(error as Error).message} />}
+      {error && <Banner kind="error" message={errorText(error)} />}
       {isLoading && <p className="text-sm text-muted-foreground">Cargando eventos…</p>}
 
       <ul className="space-y-3">
@@ -153,7 +157,7 @@ function EventModal({
 
   const save = useMutation({
     mutationFn: () => {
-      const body = {
+      const body = compact({
         name: form.name,
         description: form.description || undefined,
         startAt: new Date(form.start).toISOString(),
@@ -164,19 +168,19 @@ function EventModal({
         mapsLink: form.mapsLink.trim() || undefined,
         requirements: form.requirements || undefined,
         isActive: form.isActive,
-      };
+      }) as Omit<CreateEventInput, "organizationId">;
       return event
-        ? api(`/events/${event.id}`, { method: "PATCH", body })
-        : api("/events", { method: "POST", body: { organizationId: orgId, ...body } });
+        ? eventsApi.update(event.id, body)
+        : eventsApi.create({ organizationId: orgId, ...body });
     },
     onSuccess: done,
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const remove = useMutation({
-    mutationFn: () => api(`/events/${event!.id}`, { method: "DELETE" }),
+    mutationFn: () => eventsApi.remove(event!.id),
     onSuccess: done,
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const ro = `${inputCls} disabled:cursor-not-allowed disabled:bg-muted/40 disabled:opacity-80`;
@@ -380,31 +384,32 @@ function Registrations({ eventId, capacity }: { eventId: string; capacity: numbe
 
   const { data } = useQuery({
     queryKey: ["registrations", eventId],
-    queryFn: () => api<EventRegistration[]>(`/events/${eventId}/registrations`),
+    queryFn: () => eventsApi.registrations(eventId) as unknown as Promise<EventRegistration[]>,
   });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["registrations", eventId] });
 
   const add = useMutation({
     mutationFn: () =>
-      api(`/events/${eventId}/registrations`, {
-        method: "POST",
-        body: { clientName: name, clientPhone: phone },
-      }),
+      eventsApi.register(eventId, { clientName: name, clientPhone: phone }),
     onSuccess: () => {
       setName("");
       setPhone("");
       refresh();
+      qc.invalidateQueries({ queryKey: ["events"] });
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   const cancel = useMutation({
     mutationFn: (regId: string) =>
-      api(`/events/${eventId}/registrations/${regId}/cancel`, { method: "PATCH" }),
+      eventsApi.cancelRegistration(eventId, regId),
     onSuccess: () => {
       setToCancel(null);
       refresh();
+      qc.invalidateQueries({ queryKey: ["events"] });
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   const confirmed = (data ?? []).filter((r) => r.status === "CONFIRMED");

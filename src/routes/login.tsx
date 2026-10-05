@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 
 import { Banner } from "@/components/Banner";
 import { Brand } from "@/components/Brand";
-import { auth, login, USE_MOCK } from "@/lib/api";
+import { ApiError } from "@/lib/microfix/client";
+import { useAuth } from "@/lib/microfix/auth";
+import { errorText } from "@/lib/microfix-ui";
 import { useTheme } from "@/lib/theme";
 import { Moon, Sun } from "lucide-react";
 
@@ -28,26 +30,30 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
-  const [email, setEmail] = useState(USE_MOCK ? "demo@miagendazen.mx" : "");
-  const [password, setPassword] = useState(USE_MOCK ? "demo1234" : "");
+  const { user, login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (auth.getToken()) navigate({ to: "/" });
-  }, [navigate]);
+    if (user) navigate({ to: "/" });
+  }, [user, navigate]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      const res = await login(email, password);
-      auth.save(res.access_token, res.user);
+      await login(email, password);
       navigate({ to: "/" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible iniciar sesión");
+      setError(
+        err instanceof ApiError && err.status === 401
+          ? "Correo o contraseña incorrectos"
+          : errorText(err),
+      );
     } finally {
       setLoading(false);
     }
@@ -76,12 +82,6 @@ function LoginPage() {
             Ingresa con tu cuenta profesional.
           </p>
 
-          {USE_MOCK && (
-            <Banner
-              kind="success"
-              message="Modo demostración: los datos son simulados. Pulsa Entrar para explorar."
-            />
-          )}
           {error && <Banner kind="error" message={error} />}
 
           <label className="mb-1 block text-sm font-medium" htmlFor="email">
