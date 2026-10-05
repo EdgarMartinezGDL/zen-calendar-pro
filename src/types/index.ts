@@ -8,7 +8,14 @@ export interface AuthUser {
   organizationId: string;
 }
 
-export type AppointmentStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
+export type AppointmentStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "CANCELLED"
+  | "COMPLETED"
+  | "ASISTIO"
+  | "NO_ASISTIO"
+  | "REAGENDADA";
 
 export interface Appointment {
   id: string;
