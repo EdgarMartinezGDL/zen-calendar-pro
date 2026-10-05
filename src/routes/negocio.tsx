@@ -399,7 +399,7 @@ function ServicesTab({ orgId }: { orgId: string }) {
       } else {
         toast.success("Servicio agregado. Ahora puedes asignarle ubicaciones.");
         setCreating(false);
-        setEditingId((created as Service)?.id ?? null);
+        setEditingId((created as unknown as Service)?.id ?? null);
       }
     },
     onError: (e: Error) => setError(errorText(e)),
