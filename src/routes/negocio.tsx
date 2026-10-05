@@ -1005,9 +1005,9 @@ function SlotsTab({ orgId }: { orgId: string }) {
   const { data } = useQuery({
     queryKey: ["slots", orgId, locationId, from],
     queryFn: () =>
-      api<AppointmentSlot[]>(
-        `/appointment-slots?organizationId=${orgId}${locationId ? `&locationId=${locationId}` : ""}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-      ),
+      appointmentSlotsApi.list(
+        compact({ organizationId: orgId, locationId: locationId || undefined, from, to }) as { organizationId: string },
+      ) as unknown as Promise<AppointmentSlot[]>,
   });
 
   const { data: hours } = useQuery({
@@ -1528,8 +1528,9 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         </Field>
         <hr className="border-border" />
         <h3 className="text-lg font-bold text-foreground">Identidad en Cabecera</h3>
-        <Field label="Nombre visible en cabecera">
+        <Field label="Nombre visible en cabecera (Próximamente)">
           <input
+            disabled
             className={big}
             placeholder={value.name ?? "Mi Negocio"}
             value={value.headerName ?? ""}
@@ -1539,8 +1540,9 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
           Si lo dejas vacío se usará el nombre de tu negocio.
         </p>
-        <Field label="Tamaño de nombre en cabecera">
+        <Field label="Tamaño de nombre en cabecera (Próximamente)">
           <select
+            disabled
             className={big}
             value={value.headerNameSize ?? "md"}
             onChange={(e) =>
@@ -1641,7 +1643,9 @@ function PolicyModal({ orgId, onClose }: { orgId: string; onClose: () => void })
 /* ---------------- Mi Cuenta ---------------- */
 
 function AccountModal({ onClose }: { onClose: () => void }) {
-  const email = auth.getUser()?.email ?? "";
+  const sessionEmail = useAuth().user?.email ?? "";
+  const { data: profile } = useQuery({ queryKey: ["auth-me"], queryFn: () => authApi.me() });
+  const email = profile?.email ?? sessionEmail;
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
