@@ -7,8 +7,8 @@
 //   const { user, login, logout } = useAuth();  → user.organizationId es el
 //   que se pasa a todas las llamadas de api.ts.
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { Navigate } from '@tanstack/react-router';
 import { authApi } from './api';
 import { clearSession, getStoredUser, saveSession } from './client';
 import type { AuthUser } from './types';
@@ -17,12 +17,19 @@ interface AuthContextValue {
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  /** false hasta leer la sesión guardada en el navegador (evita errores de SSR). */
+  ready: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(getStoredUser);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setUser(getStoredUser());
+    setReady(true);
+  }, []);
 
   async function login(email: string, password: string) {
     // Credenciales malas → ApiError 401 con message "Invalid credentials"
@@ -37,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, login, logout, ready }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
@@ -47,7 +54,8 @@ export function useAuth() {
 }
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
+  if (!ready) return null;
   if (!user) return <Navigate to="/login" replace />;
   return children;
 }
