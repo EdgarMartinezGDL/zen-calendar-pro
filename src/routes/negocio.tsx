@@ -10,7 +10,22 @@ import { BillingPanel } from "@/components/BillingPanel";
 import { Modal } from "@/components/Modal";
 import { Confirm } from "@/components/Confirm";
 import { Field, inputCls } from "@/routes/index";
-import { api, auth } from "@/lib/api";
+import {
+  aiSettingsApi,
+  appointmentSlotsApi,
+  authApi,
+  businessHoursApi,
+  locationsApi,
+  organizationApi,
+  serviceLocationsApi,
+  servicesApi,
+  type CreateLocationInput,
+  type CreateServiceInput,
+  type UpdateBrandingInput,
+  type UpdateAISettingsInput,
+} from "@/lib/microfix/api";
+import { useAuth } from "@/lib/microfix/auth";
+import { compact, errorText, nextDateForDow } from "@/lib/microfix-ui";
 import { applyBranding } from "@/lib/branding";
 import type {
   AISettings,
@@ -49,7 +64,7 @@ type Tab = (typeof TABS)[number];
 
 function NegocioPage() {
   const [tab, setTab] = useState<Tab>("Ubicaciones");
-  const orgId = auth.getUser()?.organizationId ?? "";
+  const orgId = useAuth().user?.organizationId ?? "";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -107,7 +122,7 @@ function LocationsTab({ orgId }: { orgId: string }) {
 
   const { data } = useQuery({
     queryKey: ["locations", orgId],
-    queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
+    queryFn: () => locationsApi.list(orgId) as unknown as Promise<Location[]>,
   });
 
   const [form, setForm] = useState({
@@ -142,37 +157,38 @@ function LocationsTab({ orgId }: { orgId: string }) {
 
   const save = useMutation({
     mutationFn: () => {
-      const body = {
+      const body = compact({
         name: form.name,
         address: form.address || undefined,
-        mapsUrl: form.mapsUrl.trim() || null,
+        mapsUrl: form.mapsUrl.trim() || undefined,
         phone: form.phone || undefined,
         email: form.email || undefined,
         isActive: form.isActive,
-      };
+      }) as Omit<CreateLocationInput, "organizationId">;
       return editing
-        ? api(`/locations/${editing.id}`, { method: "PATCH", body })
-        : api("/locations", { method: "POST", body: { organizationId: orgId, ...body } });
+        ? locationsApi.update(editing.id, { ...body, mapsUrl: form.mapsUrl.trim() || null })
+        : locationsApi.create({ organizationId: orgId, ...body });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["locations"] });
       toast.success(editing ? "Ubicación actualizada" : "Ubicación agregada");
       close();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const remove = useMutation({
-    mutationFn: () => api(`/locations/${editing!.id}`, { method: "DELETE" }),
+    // El backend no borra sedes: se desactivan.
+    mutationFn: () => locationsApi.update(editing!.id, { isActive: false }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["locations"] });
-      toast.success("Ubicación eliminada");
+      toast.success("Ubicación desactivada");
       setConfirming(false);
       close();
     },
     onError: (e: Error) => {
       setConfirming(false);
-      setError(e.message);
+      setError(errorText(e));
     },
   });
 
@@ -304,7 +320,7 @@ function LocationsTab({ orgId }: { orgId: string }) {
 
       <Confirm
         open={confirming}
-        message={`Se eliminará “${editing?.name ?? ""}” de forma permanente. ¿Deseas continuar?`}
+        message={`Se desactivará “${editing?.name ?? ""}” (no se borra). ¿Deseas continuar?`}
         pending={remove.isPending}
         onConfirm={() => remove.mutate()}
         onCancel={() => setConfirming(false)}
@@ -340,7 +356,7 @@ function ServicesTab({ orgId }: { orgId: string }) {
 
   const { data } = useQuery({
     queryKey: ["services", orgId],
-    queryFn: () => api<Service[]>(`/services?organizationId=${orgId}`),
+    queryFn: () => servicesApi.list(orgId) as unknown as Promise<Service[]>,
   });
 
   const editing = (data ?? []).find((s) => s.id === editingId) ?? null;
@@ -365,16 +381,16 @@ function ServicesTab({ orgId }: { orgId: string }) {
 
   const save = useMutation({
     mutationFn: () => {
-      const body = {
+      const body = compact({
         name: form.name,
         description: form.description || undefined,
         durationMinutes: Number(form.durationMinutes),
         requiredAttendees: Number(form.requiredAttendees),
         isActive: form.isActive,
-      };
+      }) as Omit<CreateServiceInput, "organizationId">;
       return editing
-        ? api<Service>(`/services/${editing.id}`, { method: "PATCH", body })
-        : api<Service>("/services", { method: "POST", body: { organizationId: orgId, ...body } });
+        ? servicesApi.update(editing.id, body)
+        : servicesApi.create({ organizationId: orgId, ...body });
     },
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ["services"] });
@@ -386,20 +402,21 @@ function ServicesTab({ orgId }: { orgId: string }) {
         setEditingId((created as Service)?.id ?? null);
       }
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const remove = useMutation({
-    mutationFn: () => api(`/services/${editingId}`, { method: "DELETE" }),
+    // El backend no borra servicios: se desactivan.
+    mutationFn: () => servicesApi.update(editingId!, { isActive: false }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
-      toast.success("Servicio eliminado");
+      toast.success("Servicio desactivado");
       setConfirming(false);
       close();
     },
     onError: (e: Error) => {
       setConfirming(false);
-      setError(e.message);
+      setError(errorText(e));
     },
   });
 
@@ -468,7 +485,7 @@ function ServicesTab({ orgId }: { orgId: string }) {
 
       <Confirm
         open={confirming}
-        message={`Se eliminará el servicio “${editing?.name ?? ""}” y sus precios por ubicación. ¿Deseas continuar?`}
+        message={`Se desactivará el servicio “${editing?.name ?? ""}” (no se borra). ¿Deseas continuar?`}
         pending={remove.isPending}
         onConfirm={() => remove.mutate()}
         onCancel={() => setConfirming(false)}
@@ -484,18 +501,20 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
 
   const { data: locations } = useQuery({
     queryKey: ["locations", orgId],
-    queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
+    queryFn: () => locationsApi.list(orgId) as unknown as Promise<Location[]>,
   });
 
-  const linked = service.serviceLocations ?? [];
+  const allLinks = service.serviceLocations ?? [];
+  const linked = allLinks.filter((sl) => sl.isAvailable !== false);
   const available = (locations ?? []).filter((l) => !linked.some((sl) => sl.locationId === l.id));
 
   const add = useMutation({
-    mutationFn: () =>
-      api("/service-locations", {
-        method: "POST",
-        body: { serviceId: service.id, locationId, price: Number(price || 0) },
-      }),
+    mutationFn: () => {
+      const existing = allLinks.find((sl) => sl.locationId === locationId);
+      return existing
+        ? serviceLocationsApi.update(existing.id, { price: Number(price || 0), isAvailable: true })
+        : serviceLocationsApi.create({ serviceId: service.id, locationId, price: Number(price || 0) });
+    },
     onSuccess: async () => {
       const name = (locations ?? []).find((l) => l.id === locationId)?.name ?? "Ubicación";
       setPrice("");
@@ -503,24 +522,27 @@ function ServicePrices({ service, orgId }: { service: Service; orgId: string }) 
       await qc.invalidateQueries({ queryKey: ["services"] });
       toast.success(`${name} agregada a este servicio`);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   const update = useMutation({
     mutationFn: (vars: { id: string; price: number }) =>
-      api(`/service-locations/${vars.id}`, { method: "PATCH", body: { price: vars.price } }),
+      serviceLocationsApi.update(vars.id, { price: vars.price }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
       toast.success("Precio actualizado");
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   const unlink = useMutation({
-    mutationFn: (id: string) => api(`/service-locations/${id}`, { method: "DELETE" }),
+    // Sin borrado en el backend: se marca como no disponible.
+    mutationFn: (id: string) => serviceLocationsApi.update(id, { isAvailable: false }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
       toast.success("Ubicación quitada del servicio");
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   return (
@@ -630,7 +652,7 @@ function HoursTab({ orgId }: { orgId: string }) {
   });
   const { data: locations } = useQuery({
     queryKey: ["locations", orgId],
-    queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
+    queryFn: () => locationsApi.list(orgId) as unknown as Promise<Location[]>,
   });
 
   const today = todayYmd();
@@ -702,7 +724,7 @@ function HoursTab({ orgId }: { orgId: string }) {
       toast.success(editing ? "Horario actualizado" : "Bloque de horario agregado");
       close();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const hasOverlap = () => {
@@ -971,7 +993,7 @@ function SlotsTab({ orgId }: { orgId: string }) {
 
   const { data: locations } = useQuery({
     queryKey: ["locations", orgId],
-    queryFn: () => api<Location[]>(`/locations?organizationId=${orgId}`),
+    queryFn: () => locationsApi.list(orgId) as unknown as Promise<Location[]>,
   });
 
   const { data } = useQuery({
@@ -1285,7 +1307,7 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
         },
       }),
     onSuccess: onClose,
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const tone = value.tone ?? TONES[0]!;
@@ -1438,7 +1460,7 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
       toast.success("Marca actualizada");
       onClose();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const big = `${inputCls} h-12 text-lg`;
@@ -1576,7 +1598,7 @@ function PolicyModal({ orgId, onClose }: { orgId: string; onClose: () => void })
         },
       }),
     onSuccess: onClose,
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   return (
@@ -1644,7 +1666,7 @@ function AccountModal({ onClose }: { onClose: () => void }) {
       setError(null);
       toast.success("Contraseña actualizada correctamente");
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   return (
