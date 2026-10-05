@@ -7,7 +7,11 @@ import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
 import { Confirm } from "@/components/Confirm";
 import { Modal } from "@/components/Modal";
-import { api, auth } from "@/lib/api";
+import { appointmentsApi, organizationApi } from "@/lib/microfix/api";
+import { useAuth } from "@/lib/microfix/auth";
+import { ApiError } from "@/lib/microfix/client";
+import type { SlotFullError } from "@/lib/microfix/types";
+import { errorText } from "@/lib/microfix-ui";
 import type { Appointment, AppointmentStatus, OrganizationContext } from "@/types";
 
 export const Route = createFileRoute("/")({
@@ -37,6 +41,9 @@ const STATUS_LABEL: Record<AppointmentStatus, string> = {
   CONFIRMED: "Confirmada",
   CANCELLED: "Cancelada",
   COMPLETED: "Completada",
+  ASISTIO: "Asistió",
+  NO_ASISTIO: "No asistió",
+  REAGENDADA: "Reagendada",
 };
 
 const STATUS_CLASS: Record<AppointmentStatus, string> = {
@@ -44,6 +51,9 @@ const STATUS_CLASS: Record<AppointmentStatus, string> = {
   CONFIRMED: "bg-status-confirmed-bg text-status-confirmed",
   CANCELLED: "bg-status-cancelled-bg text-status-cancelled",
   COMPLETED: "bg-status-completed-bg text-status-completed",
+  ASISTIO: "bg-status-confirmed-bg text-status-confirmed",
+  NO_ASISTIO: "bg-status-cancelled-bg text-status-cancelled",
+  REAGENDADA: "bg-status-pending-bg text-status-pending",
 };
 
 const fmtDate = (d: Date) =>
@@ -53,7 +63,7 @@ const fmtTime = (iso: string) =>
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
 function HoyPage() {
-  const orgId = auth.getUser()?.organizationId ?? "";
+  const orgId = useAuth().user?.organizationId ?? "";
   const qc = useQueryClient();
   const [offset, setOffset] = useState(0);
   const [detail, setDetail] = useState<Appointment | null>(null);
@@ -71,9 +81,8 @@ function HoyPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["appointments", orgId, isoDay(day)],
     queryFn: () =>
-      api<Appointment[]>(
-        `/appointments?organizationId=${orgId}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-      ),
+      appointmentsApi.list({ organizationId: orgId, from, to }) as unknown as Promise<Appointment[]>,
+    enabled: !!orgId,
   });
 
   const appointments = data ?? [];
@@ -111,7 +120,7 @@ function HoyPage() {
         </div>
       </header>
 
-      {error && <Banner kind="error" message={(error as Error).message} />}
+      {error && <Banner kind="error" message={errorText(error)} />}
       {isLoading && <p className="text-sm text-muted-foreground">Cargando citas…</p>}
       {!isLoading && !error && appointments.length === 0 && (
         <div className="card-zen p-8 text-center text-sm text-muted-foreground">
@@ -197,19 +206,16 @@ function DetailModal({
 
   const statusM = useMutation({
     mutationFn: (status: AppointmentStatus) =>
-      api(`/appointments/${appointment!.id}`, { method: "PATCH", body: { status } }),
+      appointmentsApi.setStatus(appointment!.id, status as "ASISTIO" | "NO_ASISTIO"),
     onSuccess: onDone,
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const cancelM = useMutation({
     mutationFn: () =>
-      api(`/appointments/${appointment!.id}/cancel?by=PROFESSIONAL`, {
-        method: "PATCH",
-        body: { reason: reason || undefined },
-      }),
+      appointmentsApi.cancel(appointment!.id, reason || undefined),
     onSuccess: onDone,
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const rescheduleM = useMutation({
@@ -217,16 +223,13 @@ function DetailModal({
       const start = new Date(`${date}T${time}`);
       const duration =
         new Date(appointment!.endAt).getTime() - new Date(appointment!.startAt).getTime();
-      return api(`/appointments/${appointment!.id}/reschedule?by=PROFESSIONAL`, {
-        method: "PATCH",
-        body: {
-          startAt: start.toISOString(),
-          endAt: new Date(start.getTime() + duration).toISOString(),
-        },
+      return appointmentsApi.reschedule(appointment!.id, {
+        startAt: start.toISOString(),
+        endAt: new Date(start.getTime() + duration).toISOString(),
       });
     },
     onSuccess: onDone,
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(errorText(e)),
   });
 
   const dayAppts = useQuery({
@@ -235,11 +238,11 @@ function DetailModal({
     queryFn: () => {
       const from = new Date(`${date}T00:00:00`);
       const to = new Date(`${date}T23:59:59`);
-      return api<Appointment[]>(
-        `/appointments?organizationId=${appointment!.organizationId}&from=${encodeURIComponent(
-          from.toISOString(),
-        )}&to=${encodeURIComponent(to.toISOString())}`,
-      );
+      return appointmentsApi.list({
+        organizationId: appointment!.organizationId,
+        from: from.toISOString(),
+        to: to.toISOString(),
+      }) as unknown as Promise<Appointment[]>;
     },
   });
 
@@ -262,7 +265,8 @@ function DetailModal({
 
   const ctx = useQuery({
     queryKey: ["org-context", appointment?.organizationId ?? ""],
-    queryFn: () => api<OrganizationContext>(`/organizations/${appointment!.organizationId}/context`),
+    queryFn: () =>
+      organizationApi.context(appointment!.organizationId) as unknown as Promise<OrganizationContext>,
     enabled: !!appointment,
   });
 
@@ -393,7 +397,7 @@ function DetailModal({
       onCancel={() => setConfirm(null)}
       onConfirm={() => {
         setConfirm(null);
-        statusM.mutate("COMPLETED");
+        statusM.mutate("ASISTIO");
       }}
     />
     <Confirm
@@ -406,7 +410,7 @@ function DetailModal({
       onCancel={() => setConfirm(null)}
       onConfirm={() => {
         setConfirm(null);
-        statusM.mutate("CANCELLED");
+        statusM.mutate("NO_ASISTIO");
       }}
     />
     <Confirm
@@ -475,7 +479,7 @@ function NewAppointmentModal({
 
   const { data: context } = useQuery({
     queryKey: ["org-context", orgId],
-    queryFn: () => api<OrganizationContext>(`/organizations/${orgId}/context`),
+    queryFn: () => organizationApi.context(orgId) as unknown as Promise<OrganizationContext>,
     enabled: open && !!orgId,
   });
 
@@ -484,23 +488,30 @@ function NewAppointmentModal({
       const service = context?.services.find((s) => s.id === form.serviceId);
       const start = new Date(`${form.date}T${form.time}`);
       const end = new Date(start.getTime() + (service?.durationMinutes ?? 30) * 60000);
-      return api(`/appointments${force ? "?raiseCapacityIfFull=true" : ""}`, {
-        method: "POST",
-        body: {
+      return appointmentsApi.create(
+        {
           organizationId: orgId,
           clientName: form.clientName,
           clientPhone: form.clientPhone,
-          age: form.age ? Number(form.age) : undefined,
+          ...(form.age ? { age: Number(form.age) } : {}),
           locationId: form.locationId,
-          serviceId: form.serviceId || undefined,
-          notes: form.notes.trim() || undefined,
+          serviceId: form.serviceId,
+          ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
           startAt: start.toISOString(),
           endAt: end.toISOString(),
         },
-      });
+        force,
+      );
     },
     onSuccess: onDone,
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => {
+      const full = e instanceof ApiError ? (e.body as SlotFullError | undefined)?.slotFull : undefined;
+      setError(
+        full
+          ? `Horario lleno (${full.bookedCount}/${full.capacity}). ¿Agendar de todos modos subiendo el cupo a ${full.suggestedCapacity}?`
+          : errorText(e),
+      );
+    },
   });
 
   return (
