@@ -277,14 +277,15 @@ export interface SlotFullError {
 
 export interface BusinessHour {
   id: string;
-  dayOfWeek: number; // 0 = domingo … 6 = sábado
+  date: string; // "YYYY-MM-DD"
   startTime: string; // "HH:MM"
   endTime: string;
   appointmentDuration: number; // minutos
   breakDuration: number; // minutos
+  slotCapacity: number; // cupo base
   isActive: boolean;
   organizationId: string;
-  locationId: string | null; // null = aplica a todas las sedes
+  locationId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -310,6 +311,7 @@ export interface AppointmentSlot {
   endAt: string;
   capacity: number;
   bookedCount: number;
+  businessHourId?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
