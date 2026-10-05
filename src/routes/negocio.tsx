@@ -631,6 +631,8 @@ function HoursTab({ orgId }: { orgId: string }) {
   const [editing, setEditing] = useState<BusinessHour | null>(null);
   const [creating, setCreating] = useState(false);
   const [dateOnly, setDateOnly] = useState(false);
+  const [sourceId, setSourceId] = useState<string | null>(null);
+  const [targetDates, setTargetDates] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [showPast, setShowPast] = useState(false);
@@ -694,6 +696,8 @@ function HoursTab({ orgId }: { orgId: string }) {
     });
     setError(null);
     setDateOnly(duplicate);
+    setSourceId(duplicate && h ? h.id : null);
+    setTargetDates([]);
     setEditing(duplicate ? null : h);
     setCreating(duplicate || !h);
   };
@@ -729,6 +733,27 @@ function HoursTab({ orgId }: { orgId: string }) {
     },
     onError: (e: Error) => setError(errorText(e)),
   });
+
+  const replicate = useMutation({
+    mutationFn: () =>
+      businessHoursApi.replicate({ sourceId: sourceId!, targetDates: [...targetDates].sort() }),
+    onSuccess: (r) => {
+      refresh();
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      toast.success(`Bloque clonado a ${r?.length ?? targetDates.length} fecha(s)`);
+      close();
+    },
+    onError: (e: Error) => setError(errorText(e)),
+  });
+
+  const attemptReplicate = () => {
+    setError(null);
+    if (!targetDates.length) {
+      setError("Agrega al menos una fecha de destino.");
+      return;
+    }
+    replicate.mutate();
+  };
 
   const hasOverlap = () => {
     const s = toMin(form.startTime);
@@ -844,7 +869,7 @@ function HoursTab({ orgId }: { orgId: string }) {
           onClose={close}
           title={
             dateOnly
-              ? "Reutilizar bloque en otra fecha"
+              ? "Clonar a otras fechas"
               : editing
                 ? "Editar horario"
                 : "Nuevo bloque de horario"
@@ -853,14 +878,45 @@ function HoursTab({ orgId }: { orgId: string }) {
         >
           {error && <Banner kind="error" message={error} />}
           <div className="space-y-3">
-            <Field label="Fecha *">
-              <input
-                type="date"
-                className={inputCls}
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-            </Field>
+            {dateOnly ? (
+              <Field label="Fechas de destino *">
+                <input
+                  type="date"
+                  className={inputCls}
+                  min={today}
+                  value=""
+                  onChange={(e) => {
+                    const d = e.target.value;
+                    if (d && d >= today && !targetDates.includes(d)) setTargetDates([...targetDates, d].sort());
+                  }}
+                />
+                {targetDates.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {targetDates.map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setTargetDates(targetDates.filter((x) => x !== d))}
+                        className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary"
+                        aria-label={`Quitar ${d}`}
+                      >
+                        {formatDateLabel(d)} ✕
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </Field>
+            ) : (
+              <Field label="Fecha *">
+                <input
+                  type="date"
+                  className={inputCls}
+                  min={today}
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </Field>
+            )}
             {dateOnly ? (
               <div className="rounded-md bg-muted/60 p-3 text-sm">
                 <p className="font-semibold">
@@ -872,7 +928,7 @@ function HoursTab({ orgId }: { orgId: string }) {
                   {locations?.find((l) => l.id === form.locationId)?.name ?? "Todas las ubicaciones"}
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Solo puedes cambiar la fecha de destino.
+                  Elige una o varias fechas; se clonan con sus cupos (si alguna choca, no se crea ninguna).
                 </p>
               </div>
             ) : (
@@ -917,7 +973,10 @@ function HoursTab({ orgId }: { orgId: string }) {
               </>
             )}
             <div className="flex gap-2">
-              <SaveButton onClick={attemptSave} pending={save.isPending} />
+              <SaveButton
+                onClick={dateOnly ? attemptReplicate : attemptSave}
+                pending={dateOnly ? replicate.isPending : save.isPending}
+              />
               {editing && (
                 <button
                   aria-label="Eliminar horario"

@@ -21,7 +21,10 @@ interface AuthContextValue {
   ready: boolean;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+// Se guarda en globalThis para que la recarga en caliente no cree un contexto
+// nuevo (eso dejaba a las pantallas "fuera" del AuthProvider y rompía la vista).
+const g = globalThis as { __mfAuthCtx?: React.Context<AuthContextValue | null> };
+const AuthContext = (g.__mfAuthCtx ??= createContext<AuthContextValue | null>(null));
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
