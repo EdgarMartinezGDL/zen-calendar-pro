@@ -1,3 +1,4 @@
+
 // Todas las rutas del backend que usa la app del profesional.
 // REGLA: cualquier ruta que filtre o cree datos debe llevar el
 // organizationId del usuario en sesión (user.organizationId). El backend
@@ -238,34 +239,46 @@ export const serviceLocationsApi = {
     apiRequest<ServiceLocation>(`/service-locations/${id}`, { method: 'PATCH', body: data }),
 };
 
-// --- Horarios de atención --------------------------------------------------------
+// --- Horarios de atención (bloques por fecha) -----------------------------------
 
 export interface CreateBusinessHourInput {
   organizationId: string;
-  dayOfWeek: number; // 0 = domingo … 6 = sábado
+  locationId: string; // sede (obligatoria)
+  date: string; // "YYYY-MM-DD"; no puede ser una fecha pasada
   startTime: string; // "HH:MM"
   endTime: string;
   appointmentDuration: number; // ≥ 1
   breakDuration: number; // ≥ 0
-  locationId?: string; // sin sede = todas
+  slotCapacity?: number; // "Cupo base", ≥ 1 (por defecto 1)
   isActive?: boolean;
 }
 
-export type UpdateBusinessHourInput = Partial<Omit<CreateBusinessHourInput, 'organizationId' | 'locationId'>> & {
-  locationId?: string | null;
-};
+export type UpdateBusinessHourInput = Partial<Omit<CreateBusinessHourInput, 'organizationId'>>;
 
 export const businessHoursApi = {
-  list: (orgId: string, params: { locationId?: string; dayOfWeek?: number } = {}) =>
+  /** Ordenados por fecha y hora; from/to = rango "YYYY-MM-DD" (inclusive). */
+  list: (orgId: string, params: { locationId?: string; from?: string; to?: string } = {}) =>
     apiRequest<BusinessHourWithLocation[]>(`/business-hours${qs({ organizationId: orgId, ...params })}`),
   get: (id: string) => apiRequest<BusinessHourWithOrganization>(`/business-hours/${id}`),
+  /**
+   * Crea el bloque y GENERA sus cupos. 409 si se solapa con otro bloque del
+   * mismo día (en cualquier sede) o si ya hay un cupo a esa hora en la sede;
+   * 400 si la fecha ya pasó o no cabe ninguna cita.
+   */
   create: (data: CreateBusinessHourInput) =>
     apiRequest<BusinessHour>('/business-hours', { method: 'POST', body: data }),
+  /** Rehace los cupos del bloque. 409 si el bloque ya tiene citas agendadas. */
   update: (id: string, data: UpdateBusinessHourInput) =>
     apiRequest<BusinessHour>(`/business-hours/${id}`, { method: 'PATCH', body: data }),
+  /** Borra el bloque y sus cupos. 409 si el bloque ya tiene citas agendadas. */
   remove: (id: string) => apiRequest<BusinessHour>(`/business-hours/${id}`, { method: 'DELETE' }),
-  /** Copia un bloque (sourceId) a otros días; replace = true sustituye lo que haya en esos días. */
-  replicate: (data: { sourceId: string; days: number[]; replace?: boolean }) =>
+  /**
+   * Clona el bloque origen (misma sede, horas, duración, descanso y cupo base)
+   * a cada fecha de targetDates, con sus cupos. Todo o nada: si una fecha choca,
+   * no se crea ninguna. replace = true sustituye los bloques de esa sede en esas
+   * fechas (solo si no tienen citas).
+   */
+  replicate: (data: { sourceId: string; targetDates: string[]; replace?: boolean }) =>
     apiRequest<BusinessHour[]>('/business-hours/replicate', { method: 'POST', body: data }),
 };
 
@@ -353,3 +366,4 @@ export const aiSettingsApi = {
   update: (orgId: string, data: UpdateAISettingsInput) =>
     apiRequest<AISettings>(`/ai-settings/organization/${orgId}`, { method: 'PATCH', body: data }),
 };
+
