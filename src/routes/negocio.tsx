@@ -648,7 +648,10 @@ function HoursTab({ orgId }: { orgId: string }) {
 
   const { data } = useQuery({
     queryKey: ["business-hours", orgId],
-    queryFn: () => api<BusinessHour[]>(`/business-hours?organizationId=${orgId}`),
+    queryFn: async () =>
+      (await businessHoursApi.list(orgId)).map(
+        (h) => ({ ...h, date: nextDateForDow(h.dayOfWeek), capacity: 1 }) as unknown as BusinessHour,
+      ),
   });
   const { data: locations } = useQuery({
     queryKey: ["locations", orgId],
@@ -705,19 +708,22 @@ function HoursTab({ orgId }: { orgId: string }) {
 
   const save = useMutation({
     mutationFn: () => {
+      // El backend guarda horarios semanales: la fecha elegida define el día de la semana.
       const body = {
-        date: form.date,
+        dayOfWeek: new Date(`${form.date}T00:00:00`).getDay(),
         startTime: form.startTime,
         endTime: form.endTime,
         appointmentDuration: Number(form.appointmentDuration),
         breakDuration: Number(form.breakDuration),
-        capacity: Number(form.capacity || 1),
-        locationId: form.locationId || undefined,
         isActive: form.isActive,
       };
       return editing
-        ? api(`/business-hours/${editing.id}`, { method: "PATCH", body })
-        : api("/business-hours", { method: "POST", body: { organizationId: orgId, ...body } });
+        ? businessHoursApi.update(editing.id, { ...body, locationId: form.locationId || null })
+        : businessHoursApi.create({
+            organizationId: orgId,
+            ...body,
+            ...(form.locationId ? { locationId: form.locationId } : {}),
+          });
     },
     onSuccess: () => {
       refresh();
@@ -753,7 +759,7 @@ function HoursTab({ orgId }: { orgId: string }) {
   };
 
   const remove = useMutation({
-    mutationFn: () => api(`/business-hours/${editing!.id}`, { method: "DELETE" }),
+    mutationFn: () => businessHoursApi.remove(editing!.id),
     onSuccess: () => {
       refresh();
       toast.success("Bloque de horario eliminado");
@@ -1006,7 +1012,10 @@ function SlotsTab({ orgId }: { orgId: string }) {
 
   const { data: hours } = useQuery({
     queryKey: ["business-hours", orgId],
-    queryFn: () => api<BusinessHour[]>(`/business-hours?organizationId=${orgId}`),
+    queryFn: async () =>
+      (await businessHoursApi.list(orgId)).map(
+        (h) => ({ ...h, date: nextDateForDow(h.dayOfWeek), capacity: 1 }) as unknown as BusinessHour,
+      ),
   });
 
   /** Partición matemática: intervalo = duración de cita + descanso. */
@@ -1062,39 +1071,35 @@ function SlotsTab({ orgId }: { orgId: string }) {
   const save = useMutation({
     mutationFn: () => {
       if (editing?.slot) {
-        return api(`/appointment-slots/${editing.slot.id}`, {
-          method: "PATCH",
-          body: { capacity: Number(capacity), isActive },
-        });
+        return appointmentSlotsApi.update(editing.slot.id, { capacity: Number(capacity), isActive });
       }
       const start = editing ? editing.startAt : new Date(`${newSlot.date}T${newSlot.time}`);
       const end = editing
         ? editing.endAt
         : new Date(start.getTime() + Number(newSlot.duration) * 60000);
-      return api("/appointment-slots", {
-        method: "POST",
-        body: {
-          organizationId: orgId,
-          locationId: editing?.locationId ?? (locationId || null),
-          startAt: start.toISOString(),
-          endAt: end.toISOString(),
-          capacity: Number(capacity),
-          isActive,
-        },
+      return appointmentSlotsApi.create({
+        organizationId: orgId,
+        locationId: (editing?.locationId ?? locationId) as string,
+        startAt: start.toISOString(),
+        endAt: end.toISOString(),
+        capacity: Number(capacity),
+        isActive,
       });
     },
     onSuccess: () => {
       refresh();
       close();
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   const remove = useMutation({
-    mutationFn: () => api(`/appointment-slots/${editing!.slot!.id}`, { method: "DELETE" }),
+    mutationFn: () => appointmentSlotsApi.remove(editing!.slot!.id),
     onSuccess: () => {
       refresh();
       close();
     },
+    onError: (e: Error) => toast.error(errorText(e)),
   });
 
   return (
@@ -1286,16 +1291,14 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const { data } = useQuery({
     queryKey: ["ai-settings", orgId],
-    queryFn: () => api<AISettings | null>(`/ai-settings/organization/${orgId}`),
+    queryFn: () => aiSettingsApi.get(orgId) as unknown as Promise<AISettings | null>,
   });
   const [form, setForm] = useState<Partial<AISettings>>({});
   const value = { ...(data ?? {}), ...form } as AISettings;
 
   const save = useMutation({
     mutationFn: () =>
-      api(`/ai-settings/organization/${orgId}`, {
-        method: "PATCH",
-        body: {
+      aiSettingsApi.update(orgId, {
           enabled: value.enabled ?? false,
           assistantName: value.assistantName ?? "",
           tone: value.tone ?? null,
@@ -1304,8 +1307,7 @@ function AIModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
           fallbackMessage: value.fallbackMessage ?? null,
           formatWhatsappText: value.formatWhatsappText ?? false,
           allowHumanTakeover: value.allowHumanTakeover ?? false,
-        },
-      }),
+      } as UpdateAISettingsInput),
     onSuccess: onClose,
     onError: (e: Error) => setError(errorText(e)),
   });
@@ -1428,7 +1430,7 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
   const [error, setError] = useState<string | null>(null);
   const { data } = useQuery({
     queryKey: ["organization", orgId],
-    queryFn: () => api<Organization>(`/organizations/${orgId}`),
+    queryFn: () => organizationApi.get(orgId) as unknown as Promise<Organization>,
   });
   const [form, setForm] = useState<Partial<Organization>>({});
   const value = { ...(data ?? {}), ...form } as Organization;
@@ -1442,19 +1444,17 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
 
   const save = useMutation({
     mutationFn: () =>
-      api(`/organizations/${orgId}/branding`, {
-        method: "PATCH",
-        body: {
+      organizationApi.updateBranding(
+        orgId,
+        compact({
           theme: value.theme,
           logoUrl: value.logoUrl,
           primaryColor: value.primaryColor,
           secondaryColor: value.secondaryColor,
           fontFamily: value.fontFamily,
           fontScale: value.fontScale,
-          headerName: value.headerName?.trim() ? value.headerName.trim() : null,
-          headerNameSize: value.headerNameSize ?? "md",
-        },
-      }),
+        }) as UpdateBrandingInput,
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["organization"] });
       toast.success("Marca actualizada");
@@ -1581,21 +1581,18 @@ function PolicyModal({ orgId, onClose }: { orgId: string; onClose: () => void })
   const [error, setError] = useState<string | null>(null);
   const { data } = useQuery({
     queryKey: ["organization", orgId],
-    queryFn: () => api<Organization>(`/organizations/${orgId}`),
+    queryFn: () => organizationApi.get(orgId) as unknown as Promise<Organization>,
   });
   const [form, setForm] = useState<Partial<Organization>>({});
   const value = { ...(data ?? {}), ...form } as Organization;
 
   const save = useMutation({
     mutationFn: () =>
-      api(`/organizations/${orgId}`, {
-        method: "PATCH",
-        body: {
-          allowClientCancellation: value.allowClientCancellation ?? false,
-          cancellationDeadlineHours: value.cancellationDeadlineHours ?? null,
-          hasCancellationPenalty: value.hasCancellationPenalty ?? false,
-          cancellationPenaltyText: value.cancellationPenaltyText ?? null,
-        },
+      organizationApi.updateCancellationPolicy(orgId, {
+        allowClientCancellation: value.allowClientCancellation ?? false,
+        cancellationDeadlineHours: value.cancellationDeadlineHours ?? null,
+        hasCancellationPenalty: value.hasCancellationPenalty ?? false,
+        cancellationPenaltyText: value.cancellationPenaltyText ?? null,
       }),
     onSuccess: onClose,
     onError: (e: Error) => setError(errorText(e)),
@@ -1655,10 +1652,7 @@ function AccountModal({ onClose }: { onClose: () => void }) {
 
   const save = useMutation({
     mutationFn: () =>
-      api<null>("/auth/change-password", {
-        method: "POST",
-        body: { currentPassword: current, newPassword: next },
-      }),
+      authApi.changePassword(current, next),
     onSuccess: () => {
       setCurrent("");
       setNext("");
