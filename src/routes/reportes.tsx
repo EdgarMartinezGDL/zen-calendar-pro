@@ -6,7 +6,9 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
-import { api, auth } from "@/lib/api";
+import { appointmentsApi, organizationApi, reportsApi } from "@/lib/microfix/api";
+import { useAuth } from "@/lib/microfix/auth";
+import { errorText } from "@/lib/microfix-ui";
 import type { Appointment, AppointmentStatus, OrganizationContext } from "@/types";
 
 export const Route = createFileRoute("/reportes")({
@@ -33,6 +35,9 @@ const STATUS_ES: Record<AppointmentStatus, string> = {
   CONFIRMED: "Confirmada",
   CANCELLED: "Cancelada",
   COMPLETED: "Completada",
+  ASISTIO: "Asistió",
+  NO_ASISTIO: "No asistió",
+  REAGENDADA: "Reagendada",
 };
 
 const RANGES = [
@@ -61,7 +66,7 @@ const inputCls =
   "w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
 
 function ReportesPage() {
-  const orgId = auth.getUser()?.organizationId ?? "";
+  const orgId = useAuth().user?.organizationId ?? "";
   const [range, setRange] = useState<RangeKey>("30");
   const [customFrom, setCustomFrom] = useState(ymd(new Date()));
   const [customTo, setCustomTo] = useState(ymd(new Date()));
@@ -88,15 +93,21 @@ function ReportesPage() {
 
   const { data: context } = useQuery({
     queryKey: ["context", orgId],
-    queryFn: () => api<OrganizationContext>(`/organizations/${orgId}/context`),
+    queryFn: () => organizationApi.context(orgId) as unknown as Promise<OrganizationContext>,
+    enabled: !!orgId,
+  });
+
+  const { data: report } = useQuery({
+    queryKey: ["report", orgId, from, to],
+    queryFn: () => reportsApi.get(orgId, from, to),
+    enabled: !!orgId,
   });
 
   const { data: appointments, isLoading, error } = useQuery({
     queryKey: ["report-appointments", orgId, from, to],
     queryFn: () =>
-      api<Appointment[]>(
-        `/appointments?organizationId=${orgId}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-      ),
+      appointmentsApi.list({ organizationId: orgId, from, to }) as unknown as Promise<Appointment[]>,
+    enabled: !!orgId,
   });
 
   const locations = context?.locations ?? [];
@@ -127,18 +138,24 @@ function ReportesPage() {
       CONFIRMED: 0,
       CANCELLED: 0,
       COMPLETED: 0,
+      ASISTIO: 0,
+      NO_ASISTIO: 0,
+      REAGENDADA: 0,
     };
     let revenue = 0;
     const byService = new Map<string, number>();
 
     for (const a of rows) {
       byStatus[a.status] += 1;
-      if (a.status !== "CANCELLED") revenue += priceOf(a);
+      if (a.status === "ASISTIO") revenue += priceOf(a);
       const name = a.service?.name ?? "Sin servicio";
       byService.set(name, (byService.get(name) ?? 0) + 1);
     }
 
-    const done = byStatus.COMPLETED + byStatus.CONFIRMED;
+    // Sin filtros de ubicación/servicio, los totales salen del reporte del backend.
+    const unfiltered = locationId === "all" && serviceId === "all" && !!report;
+    if (unfiltered) revenue = report.revenue.total;
+    const done = byStatus.COMPLETED + byStatus.ASISTIO;
     return {
       byStatus,
       revenue,
@@ -146,7 +163,7 @@ function ReportesPage() {
       total: rows.length,
       topServices: [...byService.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5),
     };
-  }, [rows, priceOf]);
+  }, [rows, priceOf, report, locationId, serviceId]);
 
   const locationLabel =
     locationId === "all"
@@ -304,7 +321,7 @@ function ReportesPage() {
         </div>
       </section>
 
-      {error && <Banner kind="error" message={(error as Error).message} />}
+      {error && <Banner kind="error" message={errorText(error)} />}
       {isLoading && <p className="text-sm text-muted-foreground">Cargando reporte…</p>}
 
       {appointments && (
