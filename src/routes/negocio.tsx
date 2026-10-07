@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, Copy, MapPin, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Copy, MapPin, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 
