@@ -252,6 +252,13 @@ export interface CreateBusinessHourInput {
   breakDuration: number; // ≥ 0
   slotCapacity?: number; // "Cupo base", ≥ 1 (por defecto 1)
   isActive?: boolean;
+  /**
+   * Servicios que se ofrecen en el bloque: al menos uno, sin repetir, activos
+   * y ofrecidos en la sede (ServiceLocation disponible). Sus cupos solo se
+   * ofrecen para estos servicios. Al editar, si viene, reemplaza la lista;
+   * cambiar SOLO los servicios no rehace los cupos (se permite con citas).
+   */
+  serviceIds: string[];
 }
 
 export type UpdateBusinessHourInput = Partial<Omit<CreateBusinessHourInput, 'organizationId'>>;

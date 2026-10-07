@@ -286,6 +286,8 @@ export interface BusinessHour {
   isActive: boolean;
   organizationId: string;
   locationId: string;
+  serviceIds: string[]; // servicios que se ofrecen en el bloque (al menos uno)
+  services: { id: string; name: string }[]; // los mismos, con nombre (orden alfabético)
   createdAt: string;
   updatedAt: string;
 }
