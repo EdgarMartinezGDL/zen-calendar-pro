@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-// La facturación ahora vive dentro de Negocio → Configuración → Facturación y Créditos.
+// Facturación oculta en la V1 (cobro manual); la ruta redirige a /negocio.
 export const Route = createFileRoute("/billing")({
   beforeLoad: () => {
     throw redirect({ to: "/negocio" });
