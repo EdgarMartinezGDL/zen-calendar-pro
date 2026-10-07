@@ -645,6 +645,7 @@ function HoursTab({ orgId }: { orgId: string }) {
     breakDuration: "5",
     capacity: "1",
     locationId: "",
+    serviceIds: [] as string[],
     isActive: true,
   });
 
@@ -659,6 +660,17 @@ function HoursTab({ orgId }: { orgId: string }) {
     queryKey: ["locations", orgId],
     queryFn: () => locationsApi.list(orgId) as unknown as Promise<Location[]>,
   });
+  const { data: services } = useQuery({
+    queryKey: ["services", orgId],
+    queryFn: () => servicesApi.list(orgId) as unknown as Promise<Service[]>,
+  });
+  // Servicios activos que se ofrecen en una sede (los únicos que puede tener un bloque ahí).
+  const servicesAt = (locationId: string) =>
+    (services ?? []).filter(
+      (s) => s.isActive && (s.serviceLocations ?? []).some((sl) => sl.locationId === locationId && sl.isAvailable),
+    );
+  const locationName = (id: string | null | undefined) =>
+    locations?.find((l) => l.id === id)?.name ?? "Sin ubicación";
 
   const today = todayYmd();
 
@@ -692,6 +704,7 @@ function HoursTab({ orgId }: { orgId: string }) {
       breakDuration: String(h?.breakDuration ?? 5),
       capacity: String(h?.capacity ?? 1),
       locationId: h?.locationId ?? "",
+      serviceIds: h?.serviceIds ?? [],
       isActive: h?.isActive ?? true,
     });
     setError(null);
@@ -716,6 +729,7 @@ function HoursTab({ orgId }: { orgId: string }) {
         date: form.date,
         slotCapacity: Math.max(1, Number(form.capacity) || 1),
         locationId: form.locationId,
+        serviceIds: form.serviceIds,
         startTime: form.startTime,
         endTime: form.endTime,
         appointmentDuration: Number(form.appointmentDuration),
@@ -777,6 +791,10 @@ function HoursTab({ orgId }: { orgId: string }) {
       setError("Selecciona una ubicación para el bloque.");
       return;
     }
+    if (!form.serviceIds.length) {
+      setError("Selecciona al menos un servicio para el bloque.");
+      return;
+    }
     if (form.date < today) {
       setError("No puedes elegir una fecha pasada.");
       return;
@@ -826,8 +844,11 @@ function HoursTab({ orgId }: { orgId: string }) {
                 {h.capacity ?? 1}
               </p>
               <p className="text-sm text-muted-foreground">
-                {locations?.find((l) => l.id === h.locationId)?.name ?? "Todas las ubicaciones"}
+                {locationName(h.locationId)}
               </p>
+              {!!h.services?.length && (
+                <p className="text-sm text-muted-foreground">{h.services.map((s) => s.name).join(" · ")}</p>
+              )}
             </button>
             <button
               aria-label="Reutilizar este bloque en otra fecha"
@@ -925,7 +946,13 @@ function HoursTab({ orgId }: { orgId: string }) {
                 <p className="text-xs text-muted-foreground">
                   Citas de {form.appointmentDuration} min · Descanso {form.breakDuration} min · Cupo{" "}
                   {form.capacity} ·{" "}
-                  {locations?.find((l) => l.id === form.locationId)?.name ?? "Todas las ubicaciones"}
+                  {locationName(form.locationId)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {(services ?? [])
+                    .filter((s) => form.serviceIds.includes(s.id))
+                    .map((s) => s.name)
+                    .join(" · ")}
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">
                   Elige una o varias fechas; se clonan con sus cupos (si alguna choca, no se crea ninguna).
@@ -953,17 +980,71 @@ function HoursTab({ orgId }: { orgId: string }) {
                   <Field label="Cupo base">
                     <input type="number" min={1} className={inputCls} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
                   </Field>
-                  <Field label="Ubicación">
-                    <select className={inputCls} value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
-                      <option value="">Todas</option>
-                      {(locations ?? []).map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
                 </div>
+                <Field label="Ubicación *">
+                  <select
+                    className={inputCls}
+                    value={form.locationId}
+                    required
+                    onChange={(e) => {
+                      const locationId = e.target.value;
+                      const allowed = servicesAt(locationId).map((s) => s.id);
+                      // Al cambiar de sede se quitan los servicios que no se ofrecen ahí.
+                      setForm({ ...form, locationId, serviceIds: form.serviceIds.filter((id) => allowed.includes(id)) });
+                    }}
+                  >
+                    <option value="" disabled>
+                      Selecciona una ubicación…
+                    </option>
+                    {(locations ?? []).map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Servicios que se ofrecen en este bloque *">
+                  {!form.locationId ? (
+                    <p className="rounded-md border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground">
+                      Primero elige la ubicación para ver sus servicios.
+                    </p>
+                  ) : servicesAt(form.locationId).length === 0 ? (
+                    <p className="rounded-md border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground">
+                      Ningún servicio activo se ofrece en esta ubicación. Agrégala a un servicio en la pestaña Servicios.
+                    </p>
+                  ) : (
+                    <div role="group" aria-label="Servicios del bloque" className="grid gap-2 sm:grid-cols-2">
+                      {servicesAt(form.locationId).map((s) => {
+                        const checked = form.serviceIds.includes(s.id);
+                        return (
+                          <label
+                            key={s.id}
+                            className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 text-sm transition-colors ${
+                              checked
+                                ? "border-primary bg-primary/10 font-semibold text-foreground"
+                                : "border-border text-muted-foreground hover:bg-accent"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 shrink-0 accent-primary"
+                              checked={checked}
+                              onChange={() =>
+                                setForm({
+                                  ...form,
+                                  serviceIds: checked
+                                    ? form.serviceIds.filter((id) => id !== s.id)
+                                    : [...form.serviceIds, s.id],
+                                })
+                              }
+                            />
+                            {s.name}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Field>
                 {editing && (
                   <label className="flex items-center gap-2 text-sm font-medium">
                     <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
@@ -976,6 +1057,7 @@ function HoursTab({ orgId }: { orgId: string }) {
               <SaveButton
                 onClick={dateOnly ? attemptReplicate : attemptSave}
                 pending={dateOnly ? replicate.isPending : save.isPending}
+                disabled={!dateOnly && (!form.locationId || !form.serviceIds.length)}
               />
               {editing && (
                 <button
@@ -1814,15 +1896,17 @@ function SaveButton({
   onClick,
   pending,
   label = "Guardar",
+  disabled = false,
 }: {
   onClick: () => void;
   pending: boolean;
   label?: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      disabled={pending}
+      disabled={pending || disabled}
       className="w-full flex-1 btn-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
     >
       {label}

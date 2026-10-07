@@ -92,6 +92,9 @@ export interface BusinessHour {
   isActive: boolean;
   organizationId: string;
   locationId: string | null;
+  /** Servicios que se ofrecen en el bloque (al menos uno). */
+  serviceIds?: string[];
+  services?: { id: string; name: string }[];
 }
 
 export interface Event {
