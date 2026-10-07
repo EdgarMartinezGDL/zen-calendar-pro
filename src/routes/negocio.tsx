@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
-import { BillingPanel } from "@/components/BillingPanel";
 import { Modal } from "@/components/Modal";
 import { Confirm } from "@/components/Confirm";
 import { Field, inputCls } from "@/routes/index";
@@ -1379,7 +1378,6 @@ function SlotsTab({ orgId }: { orgId: string }) {
 
 function SettingsTab({ orgId }: { orgId: string }) {
   const [open, setOpen] = useState<null | "ia" | "marca" | "politica" | "cuenta">(null);
-  const [billing, setBilling] = useState(false);
 
   const cards = [
     { key: "ia" as const, title: "Asistente de IA", desc: "Nombre, tono y mensajes automáticos." },
@@ -1388,21 +1386,6 @@ function SettingsTab({ orgId }: { orgId: string }) {
     { key: "cuenta" as const, title: "Mi Cuenta", desc: "Correo de acceso y contraseña." },
   ];
 
-  if (billing) {
-    return (
-      <div className="space-y-4">
-        <button
-          onClick={() => setBilling(false)}
-          className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Volver a Configuración
-        </button>
-        <h2 className="text-xl font-bold tracking-tight">Facturación y Créditos</h2>
-        <BillingPanel />
-      </div>
-    );
-  }
 
   return (
     <>
@@ -1415,14 +1398,6 @@ function SettingsTab({ orgId }: { orgId: string }) {
             </button>
           </li>
         ))}
-        <li>
-          <button onClick={() => setBilling(true)} className="card-zen w-full p-4 text-left hover:bg-accent/40">
-            <p className="font-semibold">Facturación y Créditos</p>
-            <p className="text-xs text-muted-foreground">
-              Saldo, plan, recargas e historial de consumo.
-            </p>
-          </button>
-        </li>
       </CardList>
 
       {open === "ia" && <AIModal orgId={orgId} onClose={() => setOpen(null)} />}
@@ -1675,32 +1650,6 @@ function BrandingModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         </Field>
         <hr className="border-border" />
         <h3 className="text-lg font-bold text-foreground">Identidad en Cabecera</h3>
-        <Field label="Nombre visible en cabecera (Próximamente)">
-          <input
-            disabled
-            className={big}
-            placeholder={value.name ?? "Mi Negocio"}
-            value={value.headerName ?? ""}
-            onChange={(e) => setForm({ ...form, headerName: e.target.value })}
-          />
-        </Field>
-        <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
-          Si lo dejas vacío se usará el nombre de tu negocio.
-        </p>
-        <Field label="Tamaño de nombre en cabecera (Próximamente)">
-          <select
-            disabled
-            className={big}
-            value={value.headerNameSize ?? "md"}
-            onChange={(e) =>
-              setForm({ ...form, headerNameSize: e.target.value as "sm" | "md" | "lg" })
-            }
-          >
-            <option value="sm">Pequeño</option>
-            <option value="md">Normal</option>
-            <option value="lg">Grande</option>
-          </select>
-        </Field>
         <Field label="URL del logo">
           <input
             className={big}
