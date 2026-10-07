@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { BarChart3, CalendarDays, LogOut, Menu, Moon, Store, Sun, Users, X } from "lucide-react";
+import { BarChart3, CalendarDays, LogOut, Moon, Store, Sun, Users } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { BusinessBrand, PlatformSeal } from "@/components/Brand";
 import { Confirm } from "@/components/Confirm";
+import { NotificationBell } from "@/components/NotificationBell";
 import { organizationApi } from "@/lib/microfix/api";
 import { useAuth } from "@/lib/microfix/auth";
 import { applyBranding } from "@/lib/branding";
@@ -41,7 +42,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, ready, logout: endSession } = useAuth();
   const checked = ready && !!user;
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const orgId = user?.organizationId;
   const { data: org } = useQuery({
@@ -114,6 +114,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <PlatformSeal />
           </div>
           <p className="truncate px-3 pb-2 text-xs text-muted-foreground">{user?.fullName}</p>
+          <NotificationBell orgId={orgId!} full />
           <ThemeToggle full />
           <button
             onClick={logout}
@@ -127,13 +128,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Cabecera móvil */}
       <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-border bg-card px-2 py-0 md:hidden">
-        <button
-          onClick={() => setMenuOpen(true)}
-          aria-label="Abrir menú"
-          className="relative z-50 shrink-0 rounded-lg border border-border/60 p-2 text-foreground transition-colors hover:bg-accent"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
         {/* Bloque izquierdo: logo + nombre */}
         <div className="flex h-full min-w-0 flex-1 items-center gap-2">
           {org?.logoUrl ? (
@@ -162,6 +156,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Bloque derecho: acciones + sello institucional */}
         <div className="flex shrink-0 flex-col items-end justify-center">
           <div className="flex items-center">
+            <NotificationBell orgId={orgId!} />
             <ThemeToggle />
             <button
               onClick={logout}
@@ -177,61 +172,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-
-      {/* Drawer lateral móvil */}
-      {menuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            className="absolute inset-0 bg-foreground/50 backdrop-blur-sm"
-            onClick={() => setMenuOpen(false)}
-            aria-hidden
-          />
-          <aside className="relative z-10 flex h-full w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar p-4 shadow-2xl">
-            <div className="flex items-start justify-between gap-2">
-              <BusinessBrand name={businessName} logoUrl={org?.logoUrl} nameSize={headerNameSize} />
-              <button
-                onClick={() => setMenuOpen(false)}
-                aria-label="Cerrar menú"
-                className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <nav className="mt-6 flex flex-1 flex-col gap-1">
-              {NAV.map(({ to, label, icon: Icon }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  activeOptions={{ exact: to === "/" }}
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-md px-3 py-3 text-base font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
-                >
-                  <Icon className="h-5 w-5" />
-                  {label}
-                </Link>
-              ))}
-            </nav>
-            <div className="border-t border-sidebar-border pt-3">
-              <div className="px-3 pb-3">
-                <PlatformSeal />
-              </div>
-              <p className="truncate px-3 pb-2 text-xs text-muted-foreground">{user?.fullName}</p>
-              <ThemeToggle full />
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  logout();
-                }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
-                <LogOut className="h-4 w-4" />
-                Salir
-              </button>
-            </div>
-          </aside>
-        </div>
-      )}
-
 
       <main className="px-4 pt-4 pb-28 md:ml-64 md:px-8 md:py-8">{children}</main>
 
