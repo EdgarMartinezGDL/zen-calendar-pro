@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { Banner } from "@/components/Banner";
@@ -15,6 +15,11 @@ import { errorText } from "@/lib/microfix-ui";
 import type { Appointment, AppointmentStatus, OrganizationContext } from "@/types";
 
 export const Route = createFileRoute("/")({
+  // ?dia=AAAA-MM-DD abre la agenda en ese día (lo usa el Centro de Notificaciones).
+  validateSearch: (search: Record<string, unknown>): { dia?: string } => {
+    const dia = search["dia"];
+    return typeof dia === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? { dia } : {};
+  },
   head: () => ({
     meta: [
       { title: "Agenda del día — Mi Agenda Zen" },
@@ -68,6 +73,18 @@ function HoyPage() {
   const [offset, setOffset] = useState(0);
   const [detail, setDetail] = useState<Appointment | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  const { dia } = Route.useSearch();
+  const navigate = useNavigate();
+
+  // Llegó ?dia=: se salta a ese día y se limpia la URL.
+  useEffect(() => {
+    if (!dia) return;
+    const [y = 0, m = 1, d = 1] = dia.split("-").map(Number);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    setOffset(Math.round((new Date(y, m - 1, d).getTime() - today.getTime()) / 86_400_000));
+    navigate({ to: "/", search: {}, replace: true });
+  }, [dia, navigate]);
 
   const { day, from, to } = useMemo(() => {
     const d = new Date();
@@ -83,6 +100,7 @@ function HoyPage() {
     queryFn: () =>
       appointmentsApi.list({ organizationId: orgId, from, to }) as unknown as Promise<Appointment[]>,
     enabled: !!orgId,
+    refetchInterval: 20_000,
   });
 
   const appointments = data ?? [];
@@ -235,6 +253,7 @@ function DetailModal({
   const dayAppts = useQuery({
     queryKey: ["appointments-day", appointment?.organizationId ?? "", date],
     enabled: view === "reschedule" && !!date && !!appointment,
+    refetchInterval: 20_000,
     queryFn: () => {
       const from = new Date(`${date}T00:00:00`);
       const to = new Date(`${date}T23:59:59`);

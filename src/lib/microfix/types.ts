@@ -416,3 +416,33 @@ export interface ApiErrorBody {
   message: string | string[];
   error?: string;
 }
+
+// --- Centro de Notificaciones ---------------------------------------------------
+
+/** created = cita nueva; cancelled = cancelada; rescheduled = reagendada. */
+export type NotificationType = 'created' | 'cancelled' | 'rescheduled';
+
+/** Elemento de GET /notifications. Textos ya armados en la zona de la sede. */
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  appointmentId: string;
+  createdAt: string; // ISO UTC: cuándo ocurrió
+  read: boolean;
+  readAt: string | null;
+  title: string; // "Nueva cita por WhatsApp", "Cita cancelada por el cliente", …
+  message: string; // "Ana López · Lunes 12 de octubre a las 2:00 pm · Consultorio Zapopan"
+  clientName: string | null;
+  startAt: string | null; // ISO UTC: horario de la cita (el nuevo, si se reagendó)
+  previousStartAt: string | null; // solo rescheduled
+  locationName: string | null;
+  by: 'CLIENT' | 'PROFESSIONAL' | null; // null en created
+  channel: 'WHATSAPP' | 'APP' | null; // solo created
+  reason: string | null; // solo cancelled
+}
+
+/** GET /notifications?limit=&cursor= */
+export interface NotificationPage {
+  items: AppNotification[];
+  nextCursor: string | null; // null = no hay más
+}

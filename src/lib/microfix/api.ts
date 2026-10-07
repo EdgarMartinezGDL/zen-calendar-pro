@@ -35,6 +35,7 @@ import type {
   ServiceWithRelations,
   Theme,
   Appointment,
+  NotificationPage,
 } from './types';
 
 const qs = (params: Record<string, string | number | boolean | undefined>) => {
@@ -367,3 +368,16 @@ export const aiSettingsApi = {
     apiRequest<AISettings>(`/ai-settings/organization/${orgId}`, { method: 'PATCH', body: data }),
 };
 
+
+// --- Centro de Notificaciones --------------------------------------------------------
+// Siempre de la organización de la sesión (no lleva organizationId).
+
+export const notificationsApi = {
+  /** Más recientes primero. limit 1–50 (default 20); cursor = nextCursor de la página anterior. */
+  list: (params: { limit?: number | undefined; cursor?: string | undefined } = {}) =>
+    apiRequest<NotificationPage>(`/notifications${qs(params)}`),
+  unreadCount: () => apiRequest<{ count: number }>('/notifications/unread-count'),
+  /** Idempotente. 404 si no existe o es de otra organización. */
+  markRead: (id: string) =>
+    apiRequest<{ id: string; read: true; readAt: string }>(`/notifications/${id}/read`, { method: 'PATCH' }),
+};
